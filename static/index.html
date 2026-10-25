@@ -1,0 +1,1896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多智能体编排与模型评测一体化平台</title>
+    <style>
+        /* ========== 设计系统：CSS变量 ========== */
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --primary-light: #e8ecfd;
+            --secondary: #764ba2;
+            --success: #10b981;
+            --success-bg: #d1fae5;
+            --warning: #f59e0b;
+            --warning-bg: #fef3c7;
+            --danger: #ef4444;
+            --danger-bg: #fee2e2;
+            --info: #3b82f6;
+            --info-bg: #dbeafe;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text: #1a1a2e;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+            --radius: 8px;
+            --radius-lg: 12px;
+            --transition: all 0.2s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ========== 顶部导航栏 ========== */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 16px 32px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-brand { display: flex; align-items: center; gap: 12px; }
+        .header-brand .logo {
+            width: 36px; height: 36px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: bold;
+        }
+        .header-brand h1 { font-size: 18px; font-weight: 600; }
+        .header-brand p { font-size: 12px; opacity: 0.85; }
+        .header-status {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.15);
+            padding: 6px 14px; border-radius: 20px;
+            font-size: 13px; cursor: pointer;
+            transition: var(--transition);
+        }
+        .header-status:hover { background: rgba(255,255,255,0.25); }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ========== 主容器 ========== */
+        .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+
+        /* ========== Tab导航 ========== */
+        .tabs {
+            display: flex; gap: 4px; margin-bottom: 20px;
+            background: var(--card-bg); border-radius: var(--radius);
+            padding: 4px; box-shadow: var(--shadow);
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 10px 24px; border-radius: 6px; cursor: pointer;
+            font-size: 14px; font-weight: 500; transition: var(--transition);
+            white-space: nowrap; color: var(--gray-600);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .tab:hover { background: var(--gray-100); color: var(--text); }
+        .tab.active { background: var(--primary); color: white; }
+        .tab .tab-icon { font-size: 16px; }
+
+        .panel { display: none; animation: fadeIn 0.3s ease; }
+        .panel.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========== 卡片 ========== */
+        .card {
+            background: var(--card-bg); border-radius: var(--radius);
+            padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 16px; padding-bottom: 12px;
+            border-bottom: 2px solid var(--gray-100);
+        }
+        .card-header h2 { font-size: 16px; font-weight: 600; color: var(--gray-800); }
+        .card-header .card-actions { display: flex; gap: 8px; }
+
+        /* ========== 表单元素 ========== */
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block; font-size: 13px; font-weight: 500;
+            color: var(--gray-700); margin-bottom: 6px;
+        }
+        .form-group label .required { color: var(--danger); margin-left: 2px; }
+        .form-group .hint { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
+        .form-group .error-msg {
+            font-size: 12px; color: var(--danger); margin-top: 4px;
+            display: none;
+        }
+        .form-group.has-error .error-msg { display: block; }
+        .form-group.has-error input,
+        .form-group.has-error textarea,
+        .form-group.has-error select { border-color: var(--danger); }
+
+        input[type="text"], input[type="number"], input[type="url"],
+        textarea, select {
+            width: 100%; padding: 10px 12px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-size: 14px; font-family: inherit;
+            transition: var(--transition); background: white;
+            color: var(--text);
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none; border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        textarea { resize: vertical; min-height: 100px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+        /* ========== 按钮 ========== */
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 14px; font-weight: 500;
+            transition: var(--transition); display: inline-flex;
+            align-items: center; gap: 6px; font-family: inherit;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-primary:disabled { background: var(--gray-300); cursor: not-allowed; }
+        .btn-secondary { background: var(--gray-100); color: var(--gray-700); }
+        .btn-secondary:hover { background: var(--gray-200); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-outline {
+            background: transparent; border: 1px solid var(--border);
+            color: var(--gray-600);
+        }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* ========== 状态徽章 ========== */
+        .badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 12px;
+            font-size: 12px; font-weight: 600;
+        }
+        .badge-pending { background: var(--warning-bg); color: #92400e; }
+        .badge-running { background: var(--info-bg); color: #1e40af; }
+        .badge-completed { background: var(--success-bg); color: #065f46; }
+        .badge-failed { background: var(--danger-bg); color: #991b1b; }
+        .badge-cancelled { background: var(--gray-200); color: var(--gray-600); }
+        .badge::before {
+            content: ''; width: 6px; height: 6px;
+            border-radius: 50%; background: currentColor;
+        }
+        .badge-running::before { animation: pulse 1s infinite; }
+
+        /* ========== 表格 ========== */
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td {
+            padding: 10px 12px; text-align: left;
+            border-bottom: 1px solid var(--border); font-size: 13px;
+        }
+        th {
+            background: var(--gray-50); font-weight: 600;
+            color: var(--gray-600); white-space: nowrap;
+            position: sticky; top: 0;
+        }
+        tr { transition: var(--transition); }
+        tbody tr:hover { background: var(--gray-50); }
+        .text-mono { font-family: 'Consolas', 'Monaco', monospace; font-size: 12px; }
+        .text-truncate {
+            max-width: 300px; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap;
+        }
+        .sortable { cursor: pointer; user-select: none; }
+        .sortable:hover { color: var(--primary); }
+        .sortable .sort-arrow { font-size: 10px; margin-left: 4px; opacity: 0.5; }
+
+        /* ========== 分页 ========== */
+        .pagination {
+            display: flex; justify-content: space-between;
+            align-items: center; margin-top: 16px;
+        }
+        .pagination-info { font-size: 13px; color: var(--gray-500); }
+        .pagination-controls { display: flex; gap: 4px; }
+        .page-btn {
+            padding: 6px 12px; border: 1px solid var(--border);
+            background: white; border-radius: 4px; cursor: pointer;
+            font-size: 13px; transition: var(--transition);
+        }
+        .page-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ========== 进度条 ========== */
+        .progress-container { margin: 12px 0; }
+        .progress-bar {
+            width: 100%; height: 8px; background: var(--gray-200);
+            border-radius: 4px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 4px; transition: width 0.5s ease;
+            width: 0%;
+        }
+        .progress-fill.indeterminate {
+            animation: indeterminate 1.5s infinite;
+            width: 30%;
+        }
+        @keyframes indeterminate {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400%); }
+        }
+        .progress-text {
+            display: flex; justify-content: space-between;
+            font-size: 12px; color: var(--gray-500); margin-top: 4px;
+        }
+
+        /* ========== 统计卡片 ========== */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px; margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--gray-50); padding: 16px; border-radius: 8px;
+            text-align: center; border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+        .stat-card .stat-value {
+            font-size: 28px; font-weight: 700; color: var(--primary);
+            line-height: 1.2;
+        }
+        .stat-card .stat-label {
+            font-size: 12px; color: var(--gray-500); margin-top: 4px;
+        }
+        .stat-card.success .stat-value { color: var(--success); }
+        .stat-card.warning .stat-value { color: var(--warning); }
+        .stat-card.danger .stat-value { color: var(--danger); }
+
+        /* ========== 消息/Trace样式 ========== */
+        .trace-container { display: flex; flex-direction: column; gap: 12px; }
+        .round-group {
+            border: 1px solid var(--border); border-radius: 8px;
+            overflow: hidden;
+        }
+        .round-header {
+            background: var(--gray-50); padding: 10px 16px;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; font-size: 13px; font-weight: 600;
+            color: var(--gray-700); border-bottom: 1px solid var(--border);
+        }
+        .round-header:hover { background: var(--gray-100); }
+        .round-header .round-toggle { transition: transform 0.2s; }
+        .round-group.collapsed .round-toggle { transform: rotate(-90deg); }
+        .round-group.collapsed .round-body { display: none; }
+        .round-body { padding: 12px 16px; }
+
+        .message-item {
+            padding: 12px 16px; margin-bottom: 8px; border-radius: 8px;
+            font-size: 13px; line-height: 1.6; position: relative;
+        }
+        .message-item:last-child { margin-bottom: 0; }
+        .message-meta {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 6px; font-size: 11px;
+        }
+        .message-role {
+            font-weight: 600; text-transform: uppercase;
+            padding: 2px 8px; border-radius: 4px; font-size: 10px;
+        }
+        .message-user { background: var(--info-bg); border-left: 3px solid var(--info); }
+        .message-user .message-role { background: var(--info); color: white; }
+        .message-assistant { background: var(--primary-light); border-left: 3px solid var(--primary); }
+        .message-assistant .message-role { background: var(--primary); color: white; }
+        .message-planner { background: #dbeafe; border-left: 3px solid #3b82f6; }
+        .message-planner .message-role { background: #3b82f6; color: white; }
+        .message-executor { background: #d1fae5; border-left: 3px solid #10b981; }
+        .message-executor .message-role { background: #10b981; color: white; }
+        .message-reviewer { background: #fef3c7; border-left: 3px solid #f59e0b; }
+        .message-reviewer .message-role { background: #f59e0b; color: white; }
+        .message-aggregator { background: #f3e8ff; border-left: 3px solid #8b5cf6; }
+        .message-aggregator .message-role { background: #8b5cf6; color: white; }
+        .message-system { background: var(--gray-100); border-left: 3px solid var(--gray-400); }
+        .message-system .message-role { background: var(--gray-500); color: white; }
+
+        .message-content {
+            white-space: pre-wrap; word-break: break-word;
+            max-height: 300px; overflow-y: auto;
+        }
+        .message-content.collapsed { max-height: 80px; position: relative; }
+        .message-content.collapsed::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+            height: 40px; background: linear-gradient(transparent, inherit);
+        }
+        .message-expand-btn {
+            font-size: 11px; color: var(--primary); cursor: pointer;
+            margin-top: 4px; display: inline-block;
+        }
+
+        /* 工具调用卡片 */
+        .tool-call {
+            background: white; border: 1px solid var(--border);
+            border-radius: 6px; margin: 8px 0; overflow: hidden;
+        }
+        .tool-call-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 12px; background: var(--gray-50);
+            font-size: 12px; cursor: pointer;
+        }
+        .tool-call-header:hover { background: var(--gray-100); }
+        .tool-name { font-weight: 600; color: var(--gray-700); }
+        .tool-status { font-size: 11px; }
+        .tool-call-body { padding: 10px 12px; display: none; }
+        .tool-call.expanded .tool-call-body { display: block; }
+        .tool-call-section { margin-bottom: 8px; }
+        .tool-call-section:last-child { margin-bottom: 0; }
+        .tool-call-label {
+            font-size: 11px; font-weight: 600; color: var(--gray-500);
+            text-transform: uppercase; margin-bottom: 4px;
+        }
+        .tool-call-content {
+            font-family: 'Consolas', monospace; font-size: 12px;
+            background: var(--gray-900); color: #e5e7eb;
+            padding: 8px 10px; border-radius: 4px;
+            white-space: pre-wrap; word-break: break-all;
+            max-height: 200px; overflow-y: auto;
+        }
+
+        /* ========== 图表容器 ========== */
+        .chart-container {
+            position: relative; width: 100%;
+            margin: 16px 0;
+        }
+        .chart-container canvas { width: 100%; }
+        .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        /* ========== 弹窗/Modal ========== */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            justify-content: center; align-items: center;
+            animation: fadeIn 0.2s ease;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white; border-radius: var(--radius-lg);
+            padding: 24px; max-width: 600px; width: 90%;
+            max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 20px 25px rgba(0,0,0,0.15);
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 16px;
+        }
+        .modal-header h3 { font-size: 18px; font-weight: 600; }
+        .modal-close {
+            background: none; border: none; font-size: 20px;
+            cursor: pointer; color: var(--gray-400); padding: 4px;
+        }
+        .modal-close:hover { color: var(--gray-600); }
+
+        /* ========== Toast通知 ========== */
+        .toast-container {
+            position: fixed; top: 20px; right: 20px; z-index: 2000;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .toast {
+            padding: 12px 20px; border-radius: 8px; color: white;
+            font-size: 14px; box-shadow: var(--shadow-md);
+            animation: slideIn 0.3s ease; display: flex;
+            align-items: center; gap: 8px; min-width: 250px;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        .toast-warning { background: var(--warning); }
+        .toast-info { background: var(--info); }
+
+        /* ========== Loading ========== */
+        .loading-spinner {
+            display: inline-block; width: 16px; height: 16px;
+            border: 2px solid var(--gray-200); border-top-color: var(--primary);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay {
+            display: flex; justify-content: center; align-items: center;
+            padding: 40px; color: var(--gray-500); gap: 8px;
+        }
+
+        /* ========== 空状态 ========== */
+        .empty-state {
+            text-align: center; padding: 40px 20px; color: var(--gray-400);
+        }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+        .empty-state p { font-size: 14px; }
+
+        /* ========== 任务详情 ========== */
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .detail-item { font-size: 13px; }
+        .detail-item .detail-label { color: var(--gray-500); font-size: 12px; }
+        .detail-item .detail-value { color: var(--text); font-weight: 500; word-break: break-all; }
+        .result-box {
+            background: var(--gray-50); border: 1px solid var(--border);
+            border-radius: 6px; padding: 16px; margin-top: 12px;
+            max-height: 300px; overflow-y: auto;
+            white-space: pre-wrap; word-break: break-word;
+            font-size: 13px; line-height: 1.7;
+        }
+
+        /* ========== 筛选栏 ========== */
+        .filter-bar {
+            display: flex; gap: 12px; align-items: center;
+            margin-bottom: 16px; flex-wrap: wrap;
+        }
+        .filter-bar select, .filter-bar input { width: auto; min-width: 140px; }
+        .filter-bar label { font-size: 13px; color: var(--gray-600); }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 768px) {
+            .header { padding: 12px 16px; }
+            .header-brand h1 { font-size: 15px; }
+            .header-brand p { display: none; }
+            .container { padding: 0 12px; }
+            .card { padding: 16px; }
+            .form-row, .form-row-3 { grid-template-columns: 1fr; }
+            .chart-row { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .tab { padding: 8px 14px; font-size: 13px; }
+        }
+
+        /* ========== 滚动条美化 ========== */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="header">
+        <div class="header-brand">
+            <div class="logo">AI</div>
+            <div>
+                <h1>多智能体编排与模型评测一体化平台</h1>
+                <p>Multi-Agent Orchestration &amp; LLM Evaluation Platform</p>
+            </div>
+        </div>
+        <div class="header-status" onclick="checkHealth()" title="点击刷新健康状态">
+            <span class="status-dot" id="health-dot"></span>
+            <span id="health-text">检测中...</span>
+        </div>
+    </header>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- Tab导航 -->
+        <div class="tabs">
+            <div class="tab active" data-tab="tasks" onclick="switchTab('tasks')">
+                <span class="tab-icon">&#9881;</span> 任务管理
+            </div>
+            <div class="tab" data-tab="eval" onclick="switchTab('eval')">
+                <span class="tab-icon">&#128202;</span> 评测管理
+            </div>
+            <div class="tab" data-tab="trace" onclick="switchTab('trace')">
+                <span class="tab-icon">&#128269;</span> 轨迹查看
+            </div>
+            <div class="tab" data-tab="report" onclick="switchTab('report')">
+                <span class="tab-icon">&#128203;</span> 报告展示
+            </div>
+        </div>
+
+        <!-- ==================== 任务管理面板 ==================== -->
+        <div id="panel-tasks" class="panel active">
+            <!-- 创建任务卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>&#10133; 创建编排任务</h2>
+                </div>
+                <form id="task-form" onsubmit="return false;">
+                    <div class="form-group" id="fg-input">
+                        <label for="task-input">任务描述<span class="required">*</span></label>
+                        <textarea id="task-input" placeholder="例如：搜索并总结2024年AI领域的三大进展，要求包含多模态、Agent编排和推理优化三个方向" maxlength="10000"></textarea>
+                        <div class="hint"><span id="char-count">0</span>/10000 字符</div>
+                        <div class="error-msg">请输入任务描述（1-10000字符）</div>
+                    </div>
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label for="task-scenario">任务场景</label>
+                            <select id="task-scenario">
+                                <option value="orchestration">编排任务（Orchestration）</option>
+                                <option value="eval">评测任务（Evaluation）</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="fg-rounds">
+                            <label for="task-rounds">最大轮次</label>
+                            <input type="number" id="task-rounds" value="5" min="1" max="20">
+                            <div class="hint">1-20轮，默认5</div>
+                            <div class="error-msg">最大轮次需在1-20之间</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="task-callback">回调URL（可选）</label>
+                            <input type="url" id="task-callback" placeholder="https://example.com/callback">
+                            <div class="hint">任务完成后自动通知</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+                        <button type="button" class="btn btn-primary" onclick="createTask()" id="btn-create-task">
+                            &#128640; 提交任务
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="resetTaskForm()">重置</button>
+                        <span id="task-create-status"></span>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 任务列表卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>&#128203; 任务列表</h2>
+                    <div class="card-actions">
+                        <button class="btn btn-sm btn-outline" onclick="loadTasks()">&#128260; 刷新</button>
+                        <button class="btn btn-sm btn-outline" onclick="toggleAutoRefresh()" id="btn-auto-refresh">&#9203; 自动刷新: 关</button>
+                    </div>
+                </div>
+                <div class="filter-bar">
+                    <label>状态筛选：</label>
+                    <select id="task-status-filter" onchange="loadTasks()">
+                        <option value="">全部状态</option>
+                        <option value="pending">等待中</option>
+                        <option value="running">运行中</option>
+                        <option value="completed">已完成</option>
+                        <option value="failed">失败</option>
+                        <option value="cancelled">已取消</option>
+                    </select>
+                    <label>每页：</label>
+                    <select id="task-page-size" onchange="loadTasks()">
+                        <option value="10">10条</option>
+                        <option value="20" selected>20条</option>
+                        <option value="50">50条</option>
+                    </select>
+                </div>
+                <div class="table-wrapper">
+                    <table id="tasks-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>任务描述</th>
+                                <th>场景</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>耗时</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasks-tbody">
+                            <tr><td colspan="7"><div class="loading-overlay"><span class="loading-spinner"></span> 加载中...</div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="tasks-pagination" style="display:none;">
+                    <div class="pagination-info" id="tasks-page-info"></div>
+                    <div class="pagination-controls" id="tasks-page-controls"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 评测管理面板 ==================== -->
+        <div id="panel-eval" class="panel">
+            <!-- 创建评测运行 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>&#128202; 创建评测运行</h2>
+                </div>
+                <form id="eval-form" onsubmit="return false;">
+                    <div class="form-row">
+                        <div class="form-group" id="fg-eval-name">
+                            <label for="eval-name">运行名称<span class="required">*</span></label>
+                            <input type="text" id="eval-name" placeholder="例如：DeepSeek-V3 基线评测" maxlength="200">
+                            <div class="error-msg">请输入运行名称（1-200字符）</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="eval-category">用例类别</label>
+                            <select id="eval-category">
+                                <option value="">全部类别（30条）</option>
+                                <option value="research">研究（research）</option>
+                                <option value="code">代码（code）</option>
+                                <option value="data">数据（data）</option>
+                                <option value="writing">写作（writing）</option>
+                                <option value="reasoning">推理（reasoning）</option>
+                                <option value="tool">工具（tool）</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="eval-model">模型配置</label>
+                            <input type="text" id="eval-model" value="deepseek-chat" placeholder="模型名称">
+                            <div class="hint">记录本次评测使用的模型</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="eval-case-ids">指定用例ID（可选）</label>
+                            <input type="text" id="eval-case-ids" placeholder="逗号分隔，如：1,3,5">
+                            <div class="hint">留空则使用全部或按类别筛选</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+                        <button type="button" class="btn btn-primary" onclick="createEvalRun()" id="btn-create-eval">
+                            &#128640; 创建并开始评测
+                        </button>
+                        <span id="eval-create-status"></span>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 评测运行列表 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>&#128203; 评测运行列表</h2>
+                    <div class="card-actions">
+                        <button class="btn btn-sm btn-outline" onclick="loadEvalRuns()">&#128260; 刷新</button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="eval-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>名称</th>
+                                <th>模型</th>
+                                <th>进度</th>
+                                <th>平均分</th>
+                                <th>通过率</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eval-tbody">
+                            <tr><td colspan="8"><div class="loading-overlay"><span class="loading-spinner"></span> 加载中...</div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="eval-pagination" style="display:none;">
+                    <div class="pagination-info" id="eval-page-info"></div>
+                    <div class="pagination-controls" id="eval-page-controls"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 轨迹查看面板 ==================== -->
+        <div id="panel-trace" class="panel">
+            <div class="card">
+                <div class="card-header">
+                    <h2>&#128269; 执行链路可视化</h2>
+                </div>
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <input type="text" id="trace-task-id" placeholder="输入任务 ID（UUID格式）" style="flex:1;">
+                    <button class="btn btn-primary" onclick="loadTrace()">&#128269; 查看轨迹</button>
+                    <button class="btn btn-outline" onclick="expandAllRounds()">全部展开</button>
+                    <button class="btn btn-outline" onclick="collapseAllRounds()">全部折叠</button>
+                </div>
+
+                <!-- 任务概览 -->
+                <div id="trace-overview" style="display:none;">
+                    <div class="stats-grid" id="trace-stats"></div>
+                </div>
+
+                <!-- Checkpoint列表 -->
+                <div id="trace-checkpoints" style="display:none; margin-bottom: 16px;">
+                    <h3 style="font-size:14px; margin-bottom:8px; color:var(--gray-600);">&#128268; 检查点（Checkpoints）</h3>
+                    <div id="checkpoint-list" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+                </div>
+
+                <!-- 消息时间线 -->
+                <div id="trace-messages" class="trace-container">
+                    <div class="empty-state">
+                        <div class="empty-icon">&#128269;</div>
+                        <p>输入任务ID后查看完整执行链路</p>
+                        <p style="font-size:12px; margin-top:8px;">支持按轮次分组、Agent角色配色、工具调用详情</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 报告展示面板 ==================== -->
+        <div id="panel-report" class="panel">
+            <div class="card">
+                <div class="card-header">
+                    <h2>&#128203; 评测报告展示</h2>
+                </div>
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <input type="text" id="report-run-id" placeholder="输入评测运行 ID" style="flex:1;">
+                    <button class="btn btn-primary" onclick="loadReport()">&#128203; 查看报告</button>
+                    <button class="btn btn-outline" onclick="checkConsistency()">&#10003; 一致性校验</button>
+                </div>
+
+                <div id="report-content">
+                    <div class="empty-state">
+                        <div class="empty-icon">&#128202;</div>
+                        <p>输入评测运行ID后查看详细报告</p>
+                        <p style="font-size:12px; margin-top:8px;">包含统计概览、维度分析、分数分布、用例明细</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 任务详情弹窗 -->
+    <div class="modal-overlay" id="task-detail-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>任务详情</h3>
+                <button class="modal-close" onclick="closeModal('task-detail-modal')">&times;</button>
+            </div>
+            <div id="task-detail-content"></div>
+        </div>
+    </div>
+
+    <!-- Toast容器 -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+    // ============================================================
+    // 全局配置与状态
+    // ============================================================
+    const API_BASE = '/api/v1';
+    const APP_STATE = {
+        currentTab: 'tasks',
+        tasks: { page: 1, pageSize: 20, total: 0, autoRefresh: false, autoRefreshTimer: null },
+        eval: { page: 1, pageSize: 20, total: 0 },
+        trace: { taskId: '', messages: [], executions: [] },
+        report: { runId: '', data: null, sortField: 'overall', sortOrder: 'desc' }
+    };
+
+    // ============================================================
+    // 工具函数
+    // ============================================================
+
+    /** 统一API请求封装 */
+    async function apiRequest(url, options = {}) {
+        const defaultOptions = { headers: { 'Content-Type': 'application/json' } };
+        const opts = { ...defaultOptions, ...options };
+        try {
+            const resp = await fetch(url, opts);
+            const data = await resp.json();
+            if (data.code !== 0) {
+                throw new Error(data.message || `请求失败 (code: ${data.code})`);
+            }
+            return data.data;
+        } catch (e) {
+            console.error(`API请求失败: ${url}`, e);
+            throw e;
+        }
+    }
+
+    /** Toast通知 */
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+        toast.innerHTML = `<span>${icons[type] || 'ℹ'}</span><span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            toast.style.transition = 'all 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+
+    /** 格式化时间 */
+    function formatTime(isoStr) {
+        if (!isoStr) return '-';
+        try {
+            const d = new Date(isoStr);
+            return d.toLocaleString('zh-CN', { hour12: false });
+        } catch { return isoStr; }
+    }
+
+    /** 计算耗时 */
+    function formatDuration(start, end) {
+        if (!start || !end) return '-';
+        const ms = new Date(end) - new Date(start);
+        if (ms < 1000) return `${ms}ms`;
+        if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+        const min = Math.floor(ms / 60000);
+        const sec = Math.floor((ms % 60000) / 1000);
+        return `${min}m ${sec}s`;
+    }
+
+    /** 状态徽章HTML */
+    function statusBadge(status) {
+        const labels = {
+            pending: '等待中', running: '运行中', completed: '已完成',
+            failed: '失败', cancelled: '已取消'
+        };
+        return `<span class="badge badge-${status}">${labels[status] || status}</span>`;
+    }
+
+    /** 截断文本 */
+    function truncate(text, len = 50) {
+        if (!text) return '-';
+        return text.length > len ? text.substring(0, len) + '...' : text;
+    }
+
+    /** 转义HTML防止XSS */
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+
+    /** 打开弹窗 */
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    /** 关闭弹窗 */
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // ============================================================
+    // Tab切换
+    // ============================================================
+    function switchTab(name) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
+        document.getElementById(`panel-${name}`).classList.add('active');
+        APP_STATE.currentTab = name;
+    }
+
+    // ============================================================
+    // 健康检查
+    // ============================================================
+    async function checkHealth() {
+        const dot = document.getElementById('health-dot');
+        const text = document.getElementById('health-text');
+        text.textContent = '检测中...';
+        dot.style.background = 'var(--warning)';
+        try {
+            const data = await apiRequest(`${API_BASE}/health`);
+            if (data.status === 'ok' || data.db === 'ok') {
+                dot.style.background = 'var(--success)';
+                text.textContent = `服务正常 v${data.version || ''}`;
+            } else {
+                dot.style.background = 'var(--warning)';
+                text.textContent = '部分异常';
+            }
+        } catch (e) {
+            dot.style.background = 'var(--danger)';
+            text.textContent = '服务不可用';
+        }
+    }
+
+    // ============================================================
+    // T10-2: 任务提交与状态展示
+    // ============================================================
+
+    /** 字符计数 */
+    document.getElementById('task-input').addEventListener('input', function() {
+        document.getElementById('char-count').textContent = this.value.length;
+    });
+
+    /** 表单校验 */
+    function validateTaskForm() {
+        let valid = true;
+        const input = document.getElementById('task-input').value.trim();
+        const rounds = parseInt(document.getElementById('task-rounds').value);
+
+        const fgInput = document.getElementById('fg-input');
+        const fgRounds = document.getElementById('fg-rounds');
+
+        if (!input || input.length < 1 || input.length > 10000) {
+            fgInput.classList.add('has-error');
+            valid = false;
+        } else {
+            fgInput.classList.remove('has-error');
+        }
+
+        if (isNaN(rounds) || rounds < 1 || rounds > 20) {
+            fgRounds.classList.add('has-error');
+            valid = false;
+        } else {
+            fgRounds.classList.remove('has-error');
+        }
+
+        return valid;
+    }
+
+    /** 创建任务 */
+    async function createTask() {
+        if (!validateTaskForm()) {
+            showToast('请检查表单输入', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById('btn-create-task');
+        const statusEl = document.getElementById('task-create-status');
+        btn.disabled = true;
+        statusEl.innerHTML = '<span class="loading-spinner"></span> 提交中...';
+
+        const payload = {
+            input: document.getElementById('task-input').value.trim(),
+            scenario: document.getElementById('task-scenario').value,
+            max_rounds: parseInt(document.getElementById('task-rounds').value),
+        };
+        const callback = document.getElementById('task-callback').value.trim();
+        if (callback) payload.callback_url = callback;
+
+        try {
+            const task = await apiRequest(`${API_BASE}/tasks`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            showToast(`任务创建成功: ${task.id.substring(0, 8)}...`, 'success');
+            statusEl.innerHTML = `已创建: <span class="text-mono">${task.id}</span> ${statusBadge(task.status)}`;
+            resetTaskForm();
+            loadTasks();
+            // 自动开始轮询新任务状态
+            startTaskPolling(task.id);
+        } catch (e) {
+            statusEl.innerHTML = `<span style="color:var(--danger)">创建失败: ${escapeHtml(e.message)}</span>`;
+            showToast(`创建失败: ${e.message}`, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    /** 重置表单 */
+    function resetTaskForm() {
+        document.getElementById('task-form').reset();
+        document.getElementById('task-rounds').value = 5;
+        document.getElementById('char-count').textContent = '0';
+        document.querySelectorAll('.form-group').forEach(fg => fg.classList.remove('has-error'));
+    }
+
+    /** 任务状态轮询（单个任务，最多30次） */
+    function startTaskPolling(taskId) {
+        let attempts = 0;
+        const maxAttempts = 30;
+        const interval = setInterval(async () => {
+            attempts++;
+            if (attempts > maxAttempts) { clearInterval(interval); return; }
+            try {
+                const task = await apiRequest(`${API_BASE}/tasks/${taskId}`);
+                if (['completed', 'failed', 'cancelled'].includes(task.status)) {
+                    clearInterval(interval);
+                    showToast(`任务 ${task.status === 'completed' ? '已完成' : '执行结束'}`, task.status === 'completed' ? 'success' : 'warning');
+                    loadTasks();
+                }
+            } catch (e) {
+                if (attempts > 3) clearInterval(interval);
+            }
+        }, 2000);
+    }
+
+    /** 加载任务列表 */
+    async function loadTasks() {
+        const status = document.getElementById('task-status-filter').value;
+        const pageSize = document.getElementById('task-page-size').value;
+        APP_STATE.tasks.pageSize = parseInt(pageSize);
+
+        let url = `${API_BASE}/tasks?page=${APP_STATE.tasks.page}&page_size=${APP_STATE.tasks.pageSize}`;
+        if (status) url += `&status=${status}`;
+
+        try {
+            const data = await apiRequest(url);
+            const items = data.items || data.data?.items || [];
+            const total = data.total || items.length;
+            APP_STATE.tasks.total = total;
+
+            const tbody = document.getElementById('tasks-tbody');
+            if (items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📋</div><p>暂无任务</p></div></td></tr>`;
+            } else {
+                tbody.innerHTML = items.map(t => `
+                    <tr>
+                        <td class="text-mono" title="${escapeHtml(t.id)}">${escapeHtml(t.id.substring(0, 8))}...</td>
+                        <td class="text-truncate" title="${escapeHtml(t.input)}">${escapeHtml(truncate(t.input, 60))}</td>
+                        <td><span class="badge badge-${t.scenario === 'eval' ? 'warning' : 'info'}" style="background:var(--gray-100);color:var(--gray-600);">${t.scenario || '-'}</span></td>
+                        <td>${statusBadge(t.status)}</td>
+                        <td>${formatTime(t.created_at)}</td>
+                        <td>${formatDuration(t.started_at, t.completed_at)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline" onclick="viewTaskDetail('${t.id}')" title="查看详情">详情</button>
+                            ${t.status === 'running' || t.status === 'pending' ?
+                                `<button class="btn btn-sm btn-danger" onclick="cancelTask('${t.id}')" title="取消任务">取消</button>` : ''}
+                            <button class="btn btn-sm btn-outline" onclick="viewTrace('${t.id}')" title="查看轨迹">轨迹</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+            renderPagination('tasks', total);
+        } catch (e) {
+            document.getElementById('tasks-tbody').innerHTML =
+                `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⚠️</div><p>加载失败: ${escapeHtml(e.message)}</p></div></td></tr>`;
+        }
+    }
+
+    /** 渲染分页 */
+    function renderPagination(type, total) {
+        const state = APP_STATE[type];
+        const totalPages = Math.ceil(total / state.pageSize) || 1;
+        const pagEl = document.getElementById(`${type}-pagination`);
+        const infoEl = document.getElementById(`${type}-page-info`);
+        const ctrlEl = document.getElementById(`${type}-page-controls`);
+
+        pagEl.style.display = 'flex';
+        infoEl.textContent = `共 ${total} 条，第 ${state.page}/${totalPages} 页`;
+
+        let html = `<button class="page-btn" onclick="changePage('${type}', ${state.page - 1})" ${state.page <= 1 ? 'disabled' : ''}>上一页</button>`;
+        const start = Math.max(1, state.page - 2);
+        const end = Math.min(totalPages, state.page + 2);
+        for (let i = start; i <= end; i++) {
+            html += `<button class="page-btn ${i === state.page ? 'active' : ''}" onclick="changePage('${type}', ${i})">${i}</button>`;
+        }
+        html += `<button class="page-btn" onclick="changePage('${type}', ${state.page + 1})" ${state.page >= totalPages ? 'disabled' : ''}>下一页</button>`;
+        ctrlEl.innerHTML = html;
+    }
+
+    /** 切换页码 */
+    function changePage(type, page) {
+        APP_STATE[type].page = page;
+        if (type === 'tasks') loadTasks();
+        else if (type === 'eval') loadEvalRuns();
+    }
+
+    /** 切换自动刷新 */
+    function toggleAutoRefresh() {
+        const btn = document.getElementById('btn-auto-refresh');
+        if (APP_STATE.tasks.autoRefresh) {
+            clearInterval(APP_STATE.tasks.autoRefreshTimer);
+            APP_STATE.tasks.autoRefresh = false;
+            btn.innerHTML = '&#9203; 自动刷新: 关';
+            showToast('已关闭自动刷新', 'info');
+        } else {
+            APP_STATE.tasks.autoRefreshTimer = setInterval(loadTasks, 5000);
+            APP_STATE.tasks.autoRefresh = true;
+            btn.innerHTML = '&#9203; 自动刷新: 开';
+            showToast('已开启自动刷新（5秒）', 'success');
+        }
+    }
+
+    /** 取消任务 */
+    async function cancelTask(id) {
+        if (!confirm(`确定取消任务 ${id.substring(0, 8)}... 吗？`)) return;
+        try {
+            await apiRequest(`${API_BASE}/tasks/${id}/cancel`, { method: 'POST' });
+            showToast('任务取消请求已发送', 'success');
+            loadTasks();
+        } catch (e) {
+            showToast(`取消失败: ${e.message}`, 'error');
+        }
+    }
+
+    /** 查看任务详情 */
+    async function viewTaskDetail(id) {
+        try {
+            const task = await apiRequest(`${API_BASE}/tasks/${id}`);
+            const content = document.getElementById('task-detail-content');
+            content.innerHTML = `
+                <div class="detail-grid">
+                    <div class="detail-item"><div class="detail-label">任务ID</div><div class="detail-value text-mono">${escapeHtml(task.id)}</div></div>
+                    <div class="detail-item"><div class="detail-label">状态</div><div class="detail-value">${statusBadge(task.status)}</div></div>
+                    <div class="detail-item"><div class="detail-label">场景</div><div class="detail-value">${escapeHtml(task.scenario || '-')}</div></div>
+                    <div class="detail-item"><div class="detail-label">最大轮次</div><div class="detail-value">${task.max_rounds || '-'}</div></div>
+                    <div class="detail-item"><div class="detail-label">创建时间</div><div class="detail-value">${formatTime(task.created_at)}</div></div>
+                    <div class="detail-item"><div class="detail-label">开始时间</div><div class="detail-value">${formatTime(task.started_at)}</div></div>
+                    <div class="detail-item"><div class="detail-label">完成时间</div><div class="detail-value">${formatTime(task.completed_at)}</div></div>
+                    <div class="detail-item"><div class="detail-label">耗时</div><div class="detail-value">${formatDuration(task.started_at, task.completed_at)}</div></div>
+                </div>
+                <div class="detail-item" style="margin-top:16px;"><div class="detail-label">任务描述</div><div class="detail-value" style="white-space:pre-wrap;">${escapeHtml(task.input)}</div></div>
+                ${task.error_message ? `<div class="detail-item" style="margin-top:12px;"><div class="detail-label">错误信息</div><div class="detail-value" style="color:var(--danger);">${escapeHtml(task.error_message)}</div></div>` : ''}
+                ${task.result ? `<div style="margin-top:16px;"><div class="detail-label" style="margin-bottom:6px;">执行结果</div><div class="result-box">${escapeHtml(task.result)}</div></div>` : ''}
+                <div style="margin-top:16px; display:flex; gap:8px;">
+                    <button class="btn btn-primary btn-sm" onclick="closeModal('task-detail-modal');viewTrace('${task.id}')">查看执行轨迹</button>
+                    ${task.status === 'running' ? `<button class="btn btn-danger btn-sm" onclick="cancelTask('${task.id}');closeModal('task-detail-modal')">取消任务</button>` : ''}
+                </div>
+            `;
+            openModal('task-detail-modal');
+        } catch (e) {
+            showToast(`加载详情失败: ${e.message}`, 'error');
+        }
+    }
+
+    /** 跳转到轨迹页 */
+    function viewTrace(id) {
+        document.getElementById('trace-task-id').value = id;
+        switchTab('trace');
+        loadTrace();
+    }
+
+    // ============================================================
+    // T10-3: 执行链路可视化
+    // ============================================================
+
+    /** 加载任务轨迹 */
+    async function loadTrace() {
+        const id = document.getElementById('trace-task-id').value.trim();
+        if (!id) { showToast('请输入任务ID', 'warning'); return; }
+
+        APP_STATE.trace.taskId = id;
+        const container = document.getElementById('trace-messages');
+        container.innerHTML = '<div class="loading-overlay"><span class="loading-spinner"></span> 加载执行链路中...</div>';
+
+        try {
+            // 并行获取消息和执行记录
+            const [messagesResp, taskResp] = await Promise.all([
+                apiRequest(`${API_BASE}/tasks/${id}/messages?limit=200`),
+                apiRequest(`${API_BASE}/tasks/${id}`)
+            ]);
+
+            const messages = messagesResp.items || messagesResp || [];
+            APP_STATE.trace.messages = messages;
+
+            // 渲染概览统计
+            renderTraceOverview(taskResp, messages);
+
+            // 渲染checkpoint列表（从执行记录中提取）
+            renderCheckpoints(messages);
+
+            // 按轮次分组渲染消息
+            renderTraceMessages(messages);
+
+        } catch (e) {
+            container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>加载失败: ${escapeHtml(e.message)}</p><p style="font-size:12px;margin-top:8px;">请检查任务ID是否正确，或任务是否已开始执行</p></div>`;
+            document.getElementById('trace-overview').style.display = 'none';
+            document.getElementById('trace-checkpoints').style.display = 'none';
+        }
+    }
+
+    /** 渲染轨迹概览统计 */
+    function renderTraceOverview(task, messages) {
+        const overview = document.getElementById('trace-overview');
+        const stats = document.getElementById('trace-stats');
+        overview.style.display = 'block';
+
+        const roleCounts = {};
+        messages.forEach(m => {
+            const role = m.node || m.role || 'unknown';
+            roleCounts[role] = (roleCounts[role] || 0) + 1;
+        });
+
+        stats.innerHTML = `
+            <div class="stat-card"><div class="stat-value">${statusBadge(task.status)}</div><div class="stat-label">任务状态</div></div>
+            <div class="stat-card"><div class="stat-value">${messages.length}</div><div class="stat-label">消息总数</div></div>
+            <div class="stat-card"><div class="stat-value">${Object.keys(roleCounts).length}</div><div class="stat-label">参与角色数</div></div>
+            <div class="stat-card"><div class="stat-value">${formatDuration(task.started_at, task.completed_at)}</div><div class="stat-label">总耗时</div></div>
+        `;
+    }
+
+    /** 渲染检查点列表 */
+    function renderCheckpoints(messages) {
+        const cpSection = document.getElementById('trace-checkpoints');
+        const cpList = document.getElementById('checkpoint-list');
+
+        // 按node分组作为检查点
+        const nodes = [...new Set(messages.map(m => m.node).filter(Boolean))];
+        if (nodes.length === 0) { cpSection.style.display = 'none'; return; }
+
+        cpSection.style.display = 'block';
+        cpList.innerHTML = nodes.map((node, i) => `
+            <span class="badge badge-${['planner','executor','reviewer','aggregator'].includes(node) ? node : 'info'}"
+                  style="cursor:pointer;"
+                  onclick="scrollToNode('${node}')"
+                  title="点击跳转到 ${node} 节点">
+                ${i + 1}. ${node}
+            </span>
+        `).join('');
+    }
+
+    /** 滚动到指定节点 */
+    function scrollToNode(node) {
+        const el = document.querySelector(`[data-node="${node}"]`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.style.background = 'var(--warning-bg)';
+            setTimeout(() => el.style.background = '', 1500);
+        }
+    }
+
+    /** 渲染消息时间线（按轮次分组） */
+    function renderTraceMessages(messages) {
+        const container = document.getElementById('trace-messages');
+
+        if (messages.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>暂无消息记录</p><p style="font-size:12px;">任务可能尚未开始执行</p></div>';
+            return;
+        }
+
+        // 按轮次分组（通过sequence或node变化推断）
+        const rounds = groupMessagesByRound(messages);
+
+        container.innerHTML = rounds.map((round, idx) => `
+            <div class="round-group" data-round="${idx}">
+                <div class="round-header" onclick="toggleRound(this)">
+                    <span>
+                        <span class="round-toggle">▼</span>
+                        第 ${idx + 1} 轮（${round.length} 条消息）
+                    </span>
+                    <span style="font-size:11px; color:var(--gray-400);">
+                        ${round[0]?.created_at ? formatTime(round[0].created_at) : ''}
+                    </span>
+                </div>
+                <div class="round-body">
+                    ${round.map(m => renderMessageItem(m)).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    /** 按轮次分组消息 */
+    function groupMessagesByRound(messages) {
+        const rounds = [];
+        let currentRound = [];
+        let lastNode = null;
+        let plannerCount = 0;
+
+        messages.forEach(m => {
+            // 每次遇到planner节点视为新一轮开始（第一轮除外）
+            if (m.node === 'planner' && lastNode !== 'planner') {
+                plannerCount++;
+                if (plannerCount > 1 && currentRound.length > 0) {
+                    rounds.push(currentRound);
+                    currentRound = [];
+                }
+            }
+            currentRound.push(m);
+            lastNode = m.node;
+        });
+        if (currentRound.length > 0) rounds.push(currentRound);
+
+        // 如果只有一轮但消息很多，按node边界细分
+        if (rounds.length === 1 && messages.length > 10) {
+            return [messages];
+        }
+        return rounds;
+    }
+
+    /** 渲染单条消息 */
+    function renderMessageItem(m) {
+        const role = m.node || m.role || 'system';
+        const roleClass = ['planner', 'executor', 'reviewer', 'aggregator', 'user', 'assistant', 'system'].includes(role) ? role : 'assistant';
+        const content = m.content || m.output || JSON.stringify(m, null, 2);
+        const isLong = content.length > 300;
+
+        return `
+            <div class="message-item message-${roleClass}" data-node="${role}" data-msg-id="${m.id || ''}">
+                <div class="message-meta">
+                    <span class="message-role">${role}</span>
+                    <span style="color:var(--gray-400);">
+                        ${m.sequence ? `#${m.sequence}` : ''}
+                        ${m.created_at ? ' · ' + formatTime(m.created_at) : ''}
+                    </span>
+                </div>
+                <div class="message-content ${isLong ? 'collapsed' : ''}" id="msg-content-${m.id || Math.random()}">${escapeHtml(content)}</div>
+                ${isLong ? `<span class="message-expand-btn" onclick="toggleMessageContent(this)">展开全文 ▼</span>` : ''}
+                ${m.tool_calls ? renderToolCalls(m.tool_calls) : ''}
+            </div>
+        `;
+    }
+
+    /** 渲染工具调用 */
+    function renderToolCalls(toolCalls) {
+        if (!Array.isArray(toolCalls) || toolCalls.length === 0) return '';
+        return toolCalls.map((tc, i) => `
+            <div class="tool-call" data-tool-idx="${i}">
+                <div class="tool-call-header" onclick="this.parentElement.classList.toggle('expanded')">
+                    <span class="tool-name">🔧 ${escapeHtml(tc.tool_name || tc.name || 'unknown')}</span>
+                    <span class="tool-status">
+                        ${tc.status === 'success' ? '<span style="color:var(--success)">✓ 成功</span>' :
+                          tc.status === 'error' ? '<span style="color:var(--danger)">✕ 失败</span>' :
+                          '<span style="color:var(--gray-400)">-</span>'}
+                        ${tc.duration ? ` · ${tc.duration}ms` : ''}
+                    </span>
+                </div>
+                <div class="tool-call-body">
+                    <div class="tool-call-section">
+                        <div class="tool-call-label">参数 (Arguments)</div>
+                        <div class="tool-call-content">${escapeHtml(typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments, null, 2))}</div>
+                    </div>
+                    ${tc.result !== undefined ? `
+                    <div class="tool-call-section">
+                        <div class="tool-call-label">结果 (Result)</div>
+                        <div class="tool-call-content">${escapeHtml(typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result, null, 2))}</div>
+                    </div>` : ''}
+                    ${tc.error ? `
+                    <div class="tool-call-section">
+                        <div class="tool-call-label" style="color:var(--danger);">错误 (Error)</div>
+                        <div class="tool-call-content" style="color:#fca5a5;">${escapeHtml(tc.error)}</div>
+                    </div>` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    /** 切换轮次展开/折叠 */
+    function toggleRound(header) {
+        header.parentElement.classList.toggle('collapsed');
+    }
+
+    /** 全部展开 */
+    function expandAllRounds() {
+        document.querySelectorAll('.round-group').forEach(g => g.classList.remove('collapsed'));
+    }
+
+    /** 全部折叠 */
+    function collapseAllRounds() {
+        document.querySelectorAll('.round-group').forEach(g => g.classList.add('collapsed'));
+    }
+
+    /** 切换消息内容展开 */
+    function toggleMessageContent(btn) {
+        const content = btn.previousElementSibling;
+        content.classList.toggle('collapsed');
+        btn.textContent = content.classList.contains('collapsed') ? '展开全文 ▼' : '收起 ▲';
+    }
+
+    // ============================================================
+    // T10-4: 评测报告展示
+    // ============================================================
+
+    /** 加载评测报告 */
+    async function loadReport() {
+        const id = document.getElementById('report-run-id').value.trim();
+        if (!id) { showToast('请输入评测运行ID', 'warning'); return; }
+
+        APP_STATE.report.runId = id;
+        const container = document.getElementById('report-content');
+        container.innerHTML = '<div class="loading-overlay"><span class="loading-spinner"></span> 加载报告中...</div>';
+
+        try {
+            // 并行获取运行详情、评分记录和报告
+            const [runData, scoresData, reportData] = await Promise.all([
+                apiRequest(`${API_BASE}/eval/runs/${id}`),
+                apiRequest(`${API_BASE}/eval/runs/${id}/scores?limit=100`).catch(() => ({ items: [] })),
+                apiRequest(`${API_BASE}/eval/runs/${id}/report`).catch(() => null)
+            ]);
+
+            APP_STATE.report.data = { run: runData, scores: scoresData.items || scoresData || [], report: reportData };
+            renderReport(runData, scoresData.items || scoresData || [], reportData);
+
+        } catch (e) {
+            container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>加载失败: ${escapeHtml(e.message)}</p></div>`;
+        }
+    }
+
+    /** 渲染报告 */
+    function renderReport(run, scores, report) {
+        const container = document.getElementById('report-content');
+        const summary = report?.summary || {};
+
+        // 计算统计数据
+        const stats = calculateReportStats(run, scores, summary);
+
+        // 从 model_config_json 字符串里提取模型名
+        let modelName = '-';
+        try {
+            if (run.model_config) {
+                const mc = typeof run.model_config === 'string' ? JSON.parse(run.model_config) : run.model_config;
+                modelName = mc?.model || mc?.model_name || JSON.stringify(mc);
+            }
+        } catch (e) {
+            modelName = run.model_config || '-';
+        }
+
+        container.innerHTML = `
+            <!-- 运行信息 -->
+            <div class="card" style="margin-bottom:16px; background:var(--gray-50);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <h3 style="font-size:16px; margin-bottom:4px;">${escapeHtml(run.name || '未命名运行')}</h3>
+                        <div style="font-size:12px; color:var(--gray-500);">
+                            ID: <span class="text-mono">${escapeHtml(run.id)}</span>
+                            · 模型: ${escapeHtml(modelName)}
+                            · 创建: ${formatTime(run.created_at)}
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        ${statusBadge(run.status)}
+                        <a href="${API_BASE}/eval/runs/${run.id}/report/download?format=html" target="_blank">
+                            <button class="btn btn-sm btn-primary">下载 HTML</button>
+                        </a>
+                        <a href="${API_BASE}/eval/runs/${run.id}/report/download?format=json" target="_blank">
+                            <button class="btn btn-sm btn-secondary">下载 JSON</button>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 概览统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value">${stats.avgScore}</div><div class="stat-label">平均分</div></div>
+                <div class="stat-card success"><div class="stat-value">${(stats.passRate * 100).toFixed(1)}%</div><div class="stat-label">通过率</div></div>
+                <div class="stat-card"><div class="stat-value">${stats.total}</div><div class="stat-label">用例总数</div></div>
+                <div class="stat-card success"><div class="stat-value">${stats.passed}</div><div class="stat-label">通过数</div></div>
+                <div class="stat-card warning"><div class="stat-value">${stats.failed}</div><div class="stat-label">未通过</div></div>
+                <div class="stat-card"><div class="stat-value">${stats.median}</div><div class="stat-label">中位数</div></div>
+            </div>
+
+            <!-- 图表区域 -->
+            <div class="chart-row">
+                <div class="card">
+                    <div class="card-header"><h2>📊 四维度评分对比</h2></div>
+                    <div class="chart-container"><canvas id="chart-dimensions" height="220"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h2>📈 分数分布</h2></div>
+                    <div class="chart-container"><canvas id="chart-distribution" height="220"></canvas></div>
+                </div>
+            </div>
+
+            <!-- 用例评分明细表 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📋 用例评分明细（${scores.length}条）</h2>
+                    <div class="card-actions">
+                        <select id="report-sort" onchange="sortReportScores()" style="padding:4px 8px; font-size:12px;">
+                            <option value="overall-desc">综合分 ↓</option>
+                            <option value="overall-asc">综合分 ↑</option>
+                            <option value="accuracy-desc">准确性 ↓</option>
+                            <option value="relevance-desc">相关性 ↓</option>
+                            <option value="completeness-desc">完整性 ↓</option>
+                            <option value="format-desc">格式 ↓</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="report-scores-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>用例ID</th>
+                                <th>准确性</th>
+                                <th>相关性</th>
+                                <th>完整性</th>
+                                <th>格式</th>
+                                <th>综合分</th>
+                                <th>结果</th>
+                                <th>评审反馈</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-scores-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        // 绘制图表
+        setTimeout(() => {
+            drawDimensionChart(stats.dimensions);
+            drawDistributionChart(stats.distribution);
+            renderScoresTable(scores);
+        }, 50);
+    }
+
+    /** 计算报告统计 */
+    function calculateReportStats(run, scores, summary) {
+        const overalls = scores.map(s => s.overall_score).filter(v => v != null);
+        const passed = overalls.filter(v => v >= 6).length;
+        const total = scores.length || run.total_cases || 0;
+
+        // 维度平均分
+        const dimensions = {
+            accuracy: avg(scores.map(s => s.accuracy_score)),
+            relevance: avg(scores.map(s => s.relevance_score)),
+            completeness: avg(scores.map(s => s.completeness_score)),
+            format: avg(scores.map(s => s.format_score))
+        };
+
+        // 分数分布
+        const distribution = [0, 0, 0, 0, 0]; // 0-2, 2-4, 4-6, 6-8, 8-10
+        overalls.forEach(v => {
+            if (v < 2) distribution[0]++;
+            else if (v < 4) distribution[1]++;
+            else if (v < 6) distribution[2]++;
+            else if (v < 8) distribution[3]++;
+            else distribution[4]++;
+        });
+
+        return {
+            avgScore: summary.mean != null ? summary.mean.toFixed(2) : (overalls.length ? avg(overalls).toFixed(2) : '-'),
+            passRate: total ? passed / total : 0,
+            total,
+            passed: passed || run.passed_cases || 0,
+            failed: total - (passed || run.passed_cases || 0),
+            median: summary.median != null ? summary.median.toFixed(2) : (overalls.length ? median(overalls).toFixed(2) : '-'),
+            dimensions,
+            distribution
+        };
+    }
+
+    function avg(arr) {
+        const valid = arr.filter(v => v != null && !isNaN(v));
+        return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
+    }
+    function median(arr) {
+        if (!arr.length) return 0;
+        const sorted = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+
+    /** 绘制维度对比图（Canvas柱状图） */
+    function drawDimensionChart(dimensions) {
+        const canvas = document.getElementById('chart-dimensions');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = 220 * dpr;
+        ctx.scale(dpr, dpr);
+
+        const labels = ['准确性', '相关性', '完整性', '格式'];
+        const values = [dimensions.accuracy, dimensions.relevance, dimensions.completeness, dimensions.format];
+        const colors = ['#667eea', '#10b981', '#f59e0b', '#8b5cf6'];
+        const W = rect.width, H = 220;
+        const padL = 40, padR = 20, padT = 20, padB = 40;
+        const chartW = W - padL - padR, chartH = H - padT - padB;
+
+        // 坐标轴
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT);
+        ctx.lineTo(padL, H - padB);
+        ctx.lineTo(W - padR, H - padB);
+        ctx.stroke();
+
+        // Y轴刻度
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'right';
+        for (let i = 0; i <= 5; i++) {
+            const val = i * 2;
+            const y = padT + chartH - (val / 10) * chartH;
+            ctx.fillText(val.toString(), padL - 6, y + 4);
+            ctx.strokeStyle = '#f3f4f6';
+            ctx.beginPath();
+            ctx.moveTo(padL, y);
+            ctx.lineTo(W - padR, y);
+            ctx.stroke();
+        }
+
+        // 柱子
+        const barW = chartW / values.length * 0.5;
+        const gap = chartW / values.length;
+        values.forEach((v, i) => {
+            const x = padL + gap * i + (gap - barW) / 2;
+            const h = (v / 10) * chartH;
+            const y = padT + chartH - h;
+
+            // 渐变填充
+            const grad = ctx.createLinearGradient(x, y, x, y + h);
+            grad.addColorStop(0, colors[i]);
+            grad.addColorStop(1, colors[i] + '88');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(x, y, barW, h, [4, 4, 0, 0]);
+            ctx.fill();
+
+            // 数值标签
+            ctx.fillStyle = '#374151';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(v.toFixed(1), x + barW / 2, y - 6);
+
+            // X轴标签
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '12px sans-serif';
+            ctx.fillText(labels[i], x + barW / 2, H - padB + 18);
+        });
+    }
+
+    /** 绘制分数分布图 */
+    function drawDistributionChart(distribution) {
+        const canvas = document.getElementById('chart-distribution');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = 220 * dpr;
+        ctx.scale(dpr, dpr);
+
+        const labels = ['0-2', '2-4', '4-6', '6-8', '8-10'];
+        const colors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#059669'];
+        const W = rect.width, H = 220;
+        const padL = 40, padR = 20, padT = 20, padB = 40;
+        const chartW = W - padL - padR, chartH = H - padT - padB;
+        const maxVal = Math.max(...distribution, 1);
+
+        // 坐标轴
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT);
+        ctx.lineTo(padL, H - padB);
+        ctx.lineTo(W - padR, H - padB);
+        ctx.stroke();
+
+        // Y轴刻度
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'right';
+        const ySteps = Math.min(maxVal, 5);
+        for (let i = 0; i <= ySteps; i++) {
+            const val = Math.round(maxVal * i / ySteps);
+            const y = padT + chartH - (val / maxVal) * chartH;
+            ctx.fillText(val.toString(), padL - 6, y + 4);
+        }
+
+        // 柱子
+        const barW = chartW / distribution.length * 0.6;
+        const gap = chartW / distribution.length;
+        distribution.forEach((v, i) => {
+            const x = padL + gap * i + (gap - barW) / 2;
+            const h = (v / maxVal) * chartH;
+            const y = padT + chartH - h;
+
+            ctx.fillStyle = colors[i];
+            ctx.globalAlpha = 0.85;
+            ctx.beginPath();
+            ctx.roundRect(x, y, barW, Math.max(h, 2), [4, 4, 0, 0]);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            // 数值
+            ctx.fillStyle = '#374151';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(v.toString(), x + barW / 2, y - 6);
+
+            // 标签
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '11px sans-serif';
+            ctx.fillText(labels[i], x + barW / 2, H - padB + 18);
+        });
+    }
+
+    /** 渲染评分明细表 */
+    function renderScoresTable(scores) {
+        const tbody = document.getElementById('report-scores-tbody');
+        if (!tbody) return;
+
+        const sorted = [...scores].sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
+
+        tbody.innerHTML = sorted.map((s, i) => {
+            const overall = s.overall_score != null ? s.overall_score : '-';
+            const passed = (s.overall_score != null) && (s.overall_score >= 6);
+            return `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td class="text-mono">${escapeHtml(String(s.case_id || s.id || '-'))}</td>
+                    <td>${s.accuracy_score != null ? s.accuracy_score.toFixed(1) : '-'}</td>
+                    <td>${s.relevance_score != null ? s.relevance_score.toFixed(1) : '-'}</td>
+                    <td>${s.completeness_score != null ? s.completeness_score.toFixed(1) : '-'}</td>
+                    <td>${s.format_score != null ? s.format_score.toFixed(1) : '-'}</td>
+                    <td><strong style="color:${passed ? 'var(--success)' : 'var(--danger)'}">${typeof overall === 'number' ? overall.toFixed(2) : overall}</strong></td>
+                    <td>${passed ? '<span class="badge badge-completed">通过</span>' : '<span class="badge badge-failed">未通过</span>'}</td>
+                    <td class="text-truncate" title="${escapeHtml(s.judge_feedback || '')}" style="max-width:200px;">${escapeHtml(truncate(s.judge_feedback || '-', 40))}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    /** 排序评分表 */
+    function sortReportScores() {
+        const select = document.getElementById('report-sort');
+        const [field, order] = select.value.split('-');
+        // 前端选择器字段名 → 后端实际字段名
+        const fieldMap = { overall: 'overall_score', accuracy: 'accuracy_score', relevance: 'relevance_score', completeness: 'completeness_score', format: 'format_score' };
+        const actualField = fieldMap[field] || field;
+        const scores = APP_STATE.report.data?.scores || [];
+        const sorted = [...scores].sort((a, b) => {
+            const va = a[actualField] != null ? a[actualField] : -1;
+            const vb = b[actualField] != null ? b[actualField] : -1;
+            return order === 'desc' ? vb - va : va - vb;
+        });
+        APP_STATE.report.data.scores = sorted;
+        renderScoresTable(sorted);
+    }
+
+    /** 一致性校验 */
+    async function checkConsistency() {
+        const id = document.getElementById('report-run-id').value.trim();
+        if (!id) { showToast('请先输入评测运行ID', 'warning'); return; }
+        try {
+            const data = await apiRequest(`${API_BASE}/eval/runs/${id}/consistency`);
+            if (data.passed) {
+                showToast(`一致性校验通过 ✓（${data.details?.score_count ?? 0} 条评分记录一致）`, 'success', 4000);
+            } else {
+                showToast(`一致性校验未通过: ${JSON.stringify(data.issues || data)}`, 'warning', 5000);
+            }
+        } catch (e) {
+            showToast(`校验失败: ${e.message}`, 'error');
+        }
+    }
+
+    // ============================================================
+    // 评测管理
+    // ============================================================
+
+    /** 创建评测运行 */
+    async function createEvalRun() {
+        const name = document.getElementById('eval-name').value.trim();
+        if (!name) {
+            document.getElementById('fg-eval-name').classList.add('has-error');
+            showToast('请输入运行名称', 'warning');
+            return;
+        }
+        document.getElementById('fg-eval-name').classList.remove('has-error');
+
+        const btn = document.getElementById('btn-create-eval');
+        const statusEl = document.getElementById('eval-create-status');
+        btn.disabled = true;
+        statusEl.innerHTML = '<span class="loading-spinner"></span> 创建中...';
+
+        const payload = {
+            name,
+            model_settings: { model: document.getElementById('eval-model').value || 'qwen-plus' }
+        };
+        const category = document.getElementById('eval-category').value;
+        if (category) payload.category = category;
+        const caseIds = document.getElementById('eval-case-ids').value.trim();
+        if (caseIds) payload.case_ids = caseIds.split(',').map(s => s.trim()).filter(Boolean);
+
+        try {
+            const run = await apiRequest(`${API_BASE}/eval/runs`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            showToast(`评测运行创建成功: ${run.id}`, 'success');
+            statusEl.innerHTML = `已创建: <span class="text-mono">${run.id}</span> ${statusBadge(run.status)}`;
+            document.getElementById('eval-form').reset();
+            document.getElementById('eval-model').value = 'deepseek-chat';
+            loadEvalRuns();
+        } catch (e) {
+            statusEl.innerHTML = `<span style="color:var(--danger)">创建失败: ${escapeHtml(e.message)}</span>`;
+            showToast(`创建失败: ${e.message}`, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    /** 加载评测运行列表 */
+    async function loadEvalRuns() {
+        try {
+            const data = await apiRequest(`${API_BASE}/eval/runs?page=${APP_STATE.eval.page}&page_size=${APP_STATE.eval.pageSize}`);
+            const items = data.items || data || [];
+            const total = data.total || items.length;
+            APP_STATE.eval.total = total;
+
+            const tbody = document.getElementById('eval-tbody');
+            if (items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📊</div><p>暂无评测运行</p></div></td></tr>`;
+            } else {
+                tbody.innerHTML = items.map(r => {
+                    const progress = r.total_cases ? Math.round(r.completed_cases / r.total_cases * 100) : 0;
+                    const passRate = (r.completed_cases > 0 && r.passed_cases != null) ? ((r.passed_cases / r.completed_cases) * 100).toFixed(0) + '%' : '-';
+                    let modelLabel = '-';
+                    try {
+                        if (r.model_config) {
+                            const mc = typeof r.model_config === 'string' ? JSON.parse(r.model_config) : r.model_config;
+                            modelLabel = mc?.model || JSON.stringify(mc);
+                        }
+                    } catch (e) { modelLabel = r.model_config || '-'; }
+                    return `
+                        <tr>
+                            <td class="text-mono" title="${escapeHtml(r.id)}">${escapeHtml(String(r.id).substring(0, 8))}...</td>
+                            <td class="text-truncate" title="${escapeHtml(r.name)}">${escapeHtml(truncate(r.name, 30))}</td>
+                            <td>${escapeHtml(modelLabel)}</td>
+                            <td style="min-width:120px;">
+                                <div class="progress-bar" style="height:6px;">
+                                    <div class="progress-fill" style="width:${progress}%"></div>
+                                </div>
+                                <div style="font-size:11px; color:var(--gray-500); margin-top:2px;">${r.completed_cases || 0}/${r.total_cases || 0} (${progress}%)</div>
+                            </td>
+                            <td><strong>${r.avg_score != null ? Number(r.avg_score).toFixed(2) : '-'}</strong></td>
+                            <td>${passRate}</td>
+                            <td>${statusBadge(r.status)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline" onclick="viewReport('${r.id}')">报告</button>
+                                ${r.status === 'running' ? `<button class="btn btn-sm btn-outline" onclick="checkEvalRun('${r.id}')">检测</button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            renderPagination('eval', total);
+        } catch (e) {
+            document.getElementById('eval-tbody').innerHTML =
+                `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">⚠️</div><p>加载失败: ${escapeHtml(e.message)}</p></div></td></tr>`;
+        }
+    }
+
+    /** 触发完成检测 */
+    async function checkEvalRun(id) {
+        try {
+            await apiRequest(`${API_BASE}/eval/runs/${id}/check`, { method: 'POST' });
+            showToast('已触发完成检测', 'success');
+            loadEvalRuns();
+        } catch (e) {
+            showToast(`检测失败: ${e.message}`, 'error');
+        }
+    }
+
+    /** 跳转到报告页 */
+    function viewReport(id) {
+        document.getElementById('report-run-id').value = id;
+        switchTab('report');
+        loadReport();
+    }
+
+    // ============================================================
+    // 初始化
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        checkHealth();
+        loadTasks();
+        loadEvalRuns();
+        // 每30秒自动检查健康状态
+        setInterval(checkHealth, 30000);
+    });
+
+    // 点击弹窗外部关闭
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === this) this.classList.remove('active');
+        });
+    });
+    </script>
+</body>
+</html>

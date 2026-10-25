@@ -1,0 +1,125 @@
+# 多智能体编排与模型评测一体化平台 - 统一配置文件
+# P2-5 修正：单一 config.yaml + 环境变量覆盖（APP_ 前缀）
+# 环境变量优先级高于本文件
+
+app:
+  name: "multi-agent-orchestration-eval-platform"
+  version: "0.1.0"
+  debug: false
+  api_key: null  # 未设置则不鉴权（X-02 排除多租户）
+
+database:
+  url: "sqlite+aiosqlite:///data/db/app.db"
+  checkpoint_url: "sqlite+aiosqlite:///data/checkpoints/checkpoints.db"
+  echo: false
+  # SQLite WAL 模式参数（T1-1）
+  connect_args:
+    timeout: 5.0
+
+redis:
+  url: "redis://localhost:6379/0"
+  # 任务状态缓存 TTL（秒），P1-6
+  cache_ttl: 30
+
+celery:
+  broker_url: "redis://localhost:6379/0"
+  result_backend: "redis://localhost:6379/1"
+  # P0-1：用例级任务拆分，concurrency=4
+  worker_concurrency: 4
+  task_serializer: "json"
+  result_serializer: "json"
+  accept_content: ["json"]
+  timezone: "UTC"
+  enable_utc: true
+  # 任务超时（秒）
+  task_soft_time_limit: 300
+  task_time_limit: 360
+
+llm:
+  # 提供商：deepseek / qwen / ollama / mock
+  # 当前接通：DashScope 通义千问 qwen-plus（OpenAI 兼容模式）
+  provider: "qwen"
+  # 扁平配置（展平后映射到 AppConfig.llm_* 字段）
+  base_url: "https://ws-9l71bgaaryxlug64.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
+  # api_key 不写在 yaml 里，从 .env 的 APP_LLM_API_KEY 读取（避免空串盖过 .env）
+  model: "qwen-plus"
+  temperature: 0.0
+  max_tokens: 2048
+  timeout: 60
+  # 重试策略（T2-4）
+  retry:
+    max_attempts: 3
+    initial_delay: 1.0
+    backoff_factor: 2.0
+  # 计费单价（元/千 token），P1-9
+  pricing:
+    qwen-plus:
+      input_per_1k: 0.0008
+      output_per_1k: 0.002
+    deepseek-chat:
+      input_per_1k: 0.001
+      output_per_1k: 0.002
+    default:
+      input_per_1k: 0.001
+      output_per_1k: 0.002
+  # 预算控制（P1-9）
+  budget:
+    daily_limit_yuan: 1000.0
+    warning_threshold_yuan: 800.0
+
+mcp:
+  # MCP Server stdio 启动命令
+  server_command: "python -m app.mcp.server"
+  # 工具调用超时（秒）
+  tool_timeout: 30
+  # web_search 结果缓存 TTL（秒）
+  search_cache_ttl: 300
+  # code_exec 超时（秒），P1-8
+  code_exec_timeout: 10
+  # file_rw 单文件大小上限（字节）
+  max_file_size: 1048576  # 1MB
+  # db_query 结果行数上限
+  max_query_rows: 1000
+  # 孤儿进程阈值
+  orphan_process_threshold: 10
+
+agent:
+  # 最大协作轮次（M-02 ≥5）
+  max_rounds: 5
+  # Executor 节点内最大工具调用次数
+  max_tool_calls: 5
+  # Reviewer 不通过最大重试次数
+  max_revise_count: 2
+
+eval:
+  # 用例库目录
+  cases_dir: "eval_cases"
+  # Judge 评分次数（取平均），E-05
+  judge_rounds: 2
+  # 评分权重（T6-4）
+  scoring_weights:
+    accuracy: 0.3
+    relevance: 0.3
+    completeness: 0.25
+    format: 0.15
+  # 通过阈值
+  pass_threshold: 6.0
+
+logging:
+  # Docker 环境仅 stdout（P2-10），文件输出需 APP_LOG_TO_FILE=true
+  log_to_file: false
+  log_dir: "data/logs"
+  # 按天轮转保留天数
+  retention_days: 7
+  # 日志级别：DEBUG / INFO / WARNING / ERROR
+  level: "INFO"
+  # JSON 格式输出
+  json_format: true
+
+paths:
+  data_dir: "data"
+  db_dir: "data/db"
+  checkpoint_dir: "data/checkpoints"
+  reports_dir: "data/reports"
+  workspace_dir: "data/workspace"
+  logs_dir: "data/logs"

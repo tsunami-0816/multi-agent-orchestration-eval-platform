@@ -1,0 +1,1376 @@
+Read "D:\lg\project\multi-agent-orchestration-eval-platform\第一轮技术架构设计文档.md":
+
+     1	# 《第一轮技术架构设计文档》
+     2	
+     3	**项目名称**：多智能体编排与模型评测一体化平台
+     4	**文档版本**：v1.0（第一轮）
+     5	**基线依据**：《项目基线说明书》v1.0（2026-10-05）
+     6	**设计日期**：2026-10-05
+     7	**文档状态**：评审稿
+     8	
+     9	---
+    10	
+    11	## 目录
+    12	
+    13	1. [技术选型说明](#1-技术选型说明)
+    14	2. [整体分层架构](#2-整体分层架构)
+    15	3. [核心业务链路](#3-核心业务链路)
+    16	4. [数据模型设计](#4-数据模型设计)
+    17	5. [接口规范定义](#5-接口规范定义)
+    18	6. [部署架构设计](#6-部署架构设计)
+    19	7. [监控与运维](#7-监控与运维)
+    20	8. [技术风险与应对方案](#8-技术风险与应对方案)
+    21	
+    22	---
+    23	
+    24	## 1. 技术选型说明
+    25	
+    26	### 1.1 选型总览
+    27	
+    28	| 层级 | 组件 | 选定版本 | 许可证 | 选型理由 |
+    29	|---|---|---|---|---|
+    30	| 编排引擎 | LangGraph | 0.2.x | MIT | 基线硬约束；原生支持状态图、检查点、人机协作，是当前多 Agent 编排事实标准 |
+    31	| LLM 抽象 | LangChain | 0.3.x | MIT | 与 LangGraph 同生态，提供统一 LLM/工具/消息接口，降低模型切换成本 |
+    32	| 工具协议 | MCP Python SDK | 0.1.x | MIT | 基线硬约束；Anthropic 提出的开放协议，实现工具即插即用 |
+    33	| Web 框架 | FastAPI | 0.115.x | MIT | 异步高性能、自动生成 OpenAPI 文档、Pydantic 数据校验，Python 生态首选 |
+    34	| 任务队列 | Celery | 5.4.x | BSD-3 | 行业标准异步任务框架，支持重试、超时、结果后端；单机多进程架构满足需求 |
+    35	| 消息代理 | Redis | 7.4.x | BSD-3 | Celery 默认 broker，轻量、docker-compose 一键启动，同时兼作缓存 |
+    36	| 关系数据库 | SQLite | 3.45+（Python 内置） | Public Domain | 基线硬约束；零配置、单文件、满足单机并发读写需求 |
+    37	| ORM | SQLAlchemy | 2.0.x | MIT | 类型安全的异步 ORM，支持 Alembic 迁移，与 FastAPI 无缝集成 |
+    38	| 数据库迁移 | Alembic | 1.13.x | MIT | SQLAlchemy 官方迁移工具，版本化管理表结构变更 |
+    39	| 前端 | 纯 HTML + 原生 JS（ES6+） | — | — | 基线约束不引入重型框架；静态文件由 FastAPI 托管，零构建步骤 |
+    40	| 配置管理 | Pydantic Settings | 2.5.x | MIT | 类型安全的配置加载，支持环境变量与 YAML 文件覆盖 |
+    41	| 结构化日志 | structlog | 24.4.x | MIT/Apache-2.0 | JSON 结构化日志，支持 trace_id 透传，便于链路追踪 |
+    42	| 测试框架 | pytest | 8.3.x | MIT | Python 事实标准测试框架，插件生态丰富 |
+    43	| 覆盖率 | pytest-cov | 5.0.x | MIT | 行覆盖率统计，满足 ≥60% 指标要求 |
+    44	| API 测试 | httpx | 0.27.x | BSD-3 | 异步 HTTP 客户端，支持 FastAPI TestClient 模式 |
+    45	| 容器化 | Docker + docker-compose | 24.x / 2.20+ | Apache-2.0 | 基线要求一键启动；多服务编排标准方案 |
+    46	| 代码规范 | Ruff | 0.6.x | MIT | 极速 lint + format 一体化，替代 flake8+black+isort |
+    47	| 类型检查 | mypy | 1.11.x | MIT | 静态类型检查，提升代码可维护性 |
+    48	
+    49	### 1.2 关键选型决策说明
+    50	
+    51	#### 1.2.1 为什么用 Celery + Redis 而非 FastAPI BackgroundTasks
+    52	
+    53	基线要求任务支持"异步提交、状态轮询、结果回调"，且单任务 P95 ≤ 90s。BackgroundTasks 存在三个硬伤：
+    54	
+    55	1. **进程耦合**：API 进程重启则所有在途任务丢失，无法满足 M-04（状态可追溯）
+    56	2. **无持久化队列**：高并发提交时任务积压在内存，无削峰能力
+    57	3. **无重试/超时控制**：Agent 任务涉及外部 LLM API，网络波动时需要自动重试
+    58	
+    59	Celery + Redis 以 docker-compose 额外一个容器的代价，获得持久化队列、自动重试、超时控制、任务状态持久化等工程能力，且 API 服务与 Worker 解耦后可独立扩缩容。该方案不违反"单机部署"约束（X-01 排除的是 K8s 多节点，非单机多进程）。
+    60	
+    61	#### 1.2.2 为什么用 SQLAlchemy 而非直接 sqlite3
+    62	
+    63	- **异步支持**：SQLAlchemy 2.0 的 `asyncio` 引擎与 FastAPI 异步生态一致
+    64	- **迁移管理**：Alembic 管理 schema 版本，避免手动 ALTER TABLE
+    65	- **类型安全**：Mapped 列定义配合 mypy，减少运行时字段错误
+    66	- **可移植性**：若未来需迁移 PostgreSQL，仅改连接串即可
+    67	
+    68	#### 1.2.3 LLM 后端选型
+    69	
+    70	| 后端 | 用途 | 接入方式 |
+    71	|---|---|---|
+    72	| DeepSeek API（默认） | 开发与评测主推理后端 | OpenAI 兼容接口，`langchain-openai` 适配 |
+    73	| 通义千问（备选） | 模型对比评测 | OpenAI 兼容接口（DashScope 兼容模式） |
+    74	| Ollama + Qwen2.5-7B（可选） | 本地离线推理 | `langchain-ollama` 适配，P-02 配套范围 |
+    75	
+    76	所有 LLM 调用通过统一的 `LLMGateway` 服务抽象，切换后端仅需修改配置，不改动 Agent 代码。
+    77	
+    78	#### 1.2.4 MCP 工具实现方式
+    79	
+    80	采用 **MCP Server 独立进程 + stdio 传输**模式：
+    81	
+    82	- MCP Server 作为独立 Python 进程运行，通过 stdio/stdout JSON-RPC 与 Agent 通信
+    83	- 工具适配器以插件形式注册，新增工具仅需编写一个函数 + JSON Schema 描述（满足 T-03：≤50 行）
+    84	- Agent 侧通过 `mcp` Python SDK 的 `ClientSession` 动态发现工具列表并调用
+    85	
+    86	首批 4 个工具：`web_search`（网页搜索）、`code_exec`（代码执行）、`file_read_write`（文件读写）、`db_query`（数据库查询）。
+    87	
+    88	### 1.3 兼容性说明
+    89	
+    90	| 维度 | 兼容范围 | 说明 |
+    91	|---|---|---|
+    92	| Python | 3.10 / 3.11 / 3.12 | 基线要求 ≥3.10；CI 矩阵覆盖 3.10 和 3.12 |
+    93	| OS | Windows 10/11、Ubuntu 22.04+、macOS 13+ | 开发机兼容；Docker 运行于 Linux 容器 |
+    94	| LLM API | OpenAI 兼容协议（/v1/chat/completions） | DeepSeek、通义千问、Ollama 均兼容 |
+    95	| 浏览器 | Chrome 120+、Edge 120+、Firefox 121+ | 前端使用 ES6+ Fetch API，不依赖构建工具 |
+    96	| Docker | Engine ≥ 24.0，Compose ≥ 2.20 | 确保多阶段构建和健康检查支持 |
+    97	
+    98	---
+    99	
+   100	## 2. 整体分层架构
+   101	
+   102	### 2.1 架构总览图
+   103	
+   104	```mermaid
+   105	graph TB
+   106	    subgraph 接入层
+   107	        WEB[Web 前端<br/>HTML+原生JS]
+   108	        API[FastAPI REST API]
+   109	        CLI[CLI 命令行工具]
+   110	    end
+   111	
+   112	    subgraph 应用层
+   113	        TASK_MGR[任务管理模块]
+   114	        ORCH_MGR[编排执行模块]
+   115	        EVAL_MGR[评测管理模块]
+   116	        REPORT_MGR[报告生成模块]
+   117	    end
+   118	
+   119	    subgraph 服务层
+   120	        AGENT_SVC[Agent 编排服务<br/>LangGraph StateGraph]
+   121	        MCP_SVC[MCP 工具服务<br/>MCP Server]
+   122	        LLM_SVC[LLM 网关服务<br/>统一模型接入]
+   123	        EVAL_ENGINE[评测引擎服务<br/>LLM-as-Judge]
+   124	    end
+   125	
+   126	    subgraph 计算层
+   127	        LLM_EXT[外部 LLM API<br/>DeepSeek/通义]
+   128	        LLM_LOCAL[本地模型<br/>Ollama Qwen2.5-7B]
+   129	        AGENT_RUNTIME[Agent 执行引擎<br/>Celery Worker]
+   130	        SCORING[评分计算引擎]
+   131	    end
+   132	
+   133	    subgraph 存储层
+   134	        DB[(SQLite<br/>任务/评测/结果)]
+   135	        CKPT[(LangGraph Checkpointer<br/>SqliteSaver)]
+   136	        FILES[本地文件存储<br/>报告/附件]
+   137	        REDIS[(Redis<br/>队列/缓存)]
+   138	    end
+   139	
+   140	    subgraph 运维层
+   141	        LOG[结构化日志<br/>structlog]
+   142	        METRIC[指标采集<br/>Prometheus 格式]
+   143	        CONFIG[配置管理<br/>Pydantic Settings]
+   144	        HEALTH[健康检查]
+   145	    end
+   146	
+   147	    WEB --> API
+   148	    CLI --> API
+   149	    API --> TASK_MGR
+   150	    API --> EVAL_MGR
+   151	    API --> REPORT_MGR
+   152	    TASK_MGR --> ORCH_MGR
+   153	    ORCH_MGR --> AGENT_SVC
+   154	    EVAL_MGR --> EVAL_ENGINE
+   155	    EVAL_MGR --> REPORT_MGR
+   156	    AGENT_SVC --> LLM_SVC
+   157	    AGENT_SVC --> MCP_SVC
+   158	    EVAL_ENGINE --> LLM_SVC
+   159	    LLM_SVC --> LLM_EXT
+   160	    LLM_SVC --> LLM_LOCAL
+   161	    AGENT_SVC --> AGENT_RUNTIME
+   162	    EVAL_ENGINE --> SCORING
+   163	    TASK_MGR --> DB
+   164	    EVAL_MGR --> DB
+   165	    REPORT_MGR --> FILES
+   166	    AGENT_SVC --> CKPT
+   167	    AGENT_RUNTIME --> REDIS
+   168	    LOG --> METRIC
+   169	    CONFIG --> HEALTH
+   170	```
+   171	
+   172	### 2.2 各层职责与组件
+   173	
+   174	#### 2.2.1 接入层
+   175	
+   176	| 组件 | 职责 | 技术实现 |
+   177	|---|---|---|
+   178	| Web 前端 | 任务提交表单、状态实时展示、评测报告可视化、工具列表查看 | 单页 HTML + 原生 JS，Fetch API 轮询，FastAPI 静态文件托管 |
+   179	| REST API | 统一 HTTP 入口，请求校验、鉴权、路由分发、异步任务提交 | FastAPI 0.115，Pydantic v2 请求/响应模型 |
+   180	| CLI 工具 | 本地一键评测、任务提交、报告导出（开发者辅助） | Typer 0.12，与 API 共享服务层代码 |
+   181	
+   182	#### 2.2.2 应用层
+   183	
+   184	| 模块 | 职责 | 核心类/函数 |
+   185	|---|---|---|
+   186	| 任务管理模块 | 任务创建、状态流转、结果持久化、列表查询 | `TaskService`、`TaskStatus` 枚举 |
+   187	| 编排执行模块 | 调用 LangGraph 执行多 Agent 编排，管理执行生命周期 | `OrchestrationService`、`LangGraphRunner` |
+   188	| 评测管理模块 | 评测用例加载、评测运行调度、评分汇总 | `EvalService`、`EvalCaseLoader` |
+   189	| 报告生成模块 | 评测结果聚合、HTML/JSON 报告渲染、文件导出 | `ReportGenerator`、Jinja2 模板 |
+   190	
+   191	#### 2.2.3 服务层
+   192	
+   193	| 服务 | 职责 | 关键设计 |
+   194	|---|---|---|
+   195	| Agent 编排服务 | 定义 LangGraph StateGraph，管理 Planner/Executor/Reviewer 三角色协作，状态检查点持久化 | 状态图见 §3.1；SqliteSaver 做检查点 |
+   196	| MCP 工具服务 | 独立 MCP Server 进程，注册 ≥4 个工具，提供工具发现与调用 | stdio 传输；工具适配器插件化 |
+   197	| LLM 网关服务 | 统一 LLM 调用入口，模型路由、超时重试、Token 计数、Mock 模式 | `LLMGateway` 抽象类；配置驱动切换 |
+   198	| 评测引擎服务 | 逐用例执行 Agent 任务，调用 LLM-as-Judge 多维度评分，计算统计指标 | 4 维度评分器；并发控制 |
+   199	
+   200	#### 2.2.4 计算层
+   201	
+   202	| 组件 | 职责 |
+   203	|---|---|
+   204	| 外部 LLM API | 默认推理后端（DeepSeek），处理 Agent 对话与 Judge 评分 |
+   205	| 本地模型（Ollama） | 可选离线推理后端，功能等价于 API 模型（P-02） |
+   206	| Agent 执行引擎 | Celery Worker 进程，实际执行编排任务，支持并发 worker |
+   207	| 评分计算引擎 | 对 LLM-as-Judge 返回的分数进行聚合、百分位计算、一致性校验 |
+   208	
+   209	#### 2.2.5 存储层
+   210	
+   211	| 存储 | 职责 | 数据内容 |
+   212	|---|---|---|
+   213	| SQLite（主库） | 业务数据持久化 | 任务、执行记录、Agent 消息、工具调用、评测用例、评测运行、评分、报告元数据 |
+   214	| LangGraph Checkpointer | 编排状态检查点 | StateGraph 每个节点的状态快照，支持任意节点重入回放 |
+   215	| 本地文件存储 | 大文件与报告 | 评测报告 HTML/JSON、任务输出附件、日志归档 |
+   216	| Redis | 消息队列与缓存 | Celery 任务队列、任务结果缓存、API 限流计数 |
+   217	
+   218	#### 2.2.6 运维层
+   219	
+   220	| 组件 | 职责 |
+   221	|---|---|
+   222	| 结构化日志 | 全链路 trace_id 透传，JSON 格式输出，按级别分流 |
+   223	| 指标采集 | 业务指标（任务完成率、评测耗时）+ 系统指标（QPS、延迟），Prometheus 文本格式暴露 `/metrics` |
+   224	| 配置管理 | 集中式配置，环境变量优先，YAML 文件兜底，敏感信息不入库 |
+   225	| 健康检查 | `/health` 端点检查 DB/Redis/LLM 连通性，docker-compose 依赖健康检查 |
+   226	
+   227	### 2.3 层间通信规则
+   228	
+   229	- **接入层 → 应用层**：同步调用，FastAPI 依赖注入获取 Service 实例
+   230	- **应用层 → 服务层**：同步调用（短操作）或 Celery 异步任务（长操作）
+   231	- **服务层 → 计算层**：LLM 调用通过 `LLMGateway` 统一出口，禁止 Service 直接调用 SDK
+   232	- **服务层 → 存储层**：通过 SQLAlchemy Repository 模式访问，禁止 Service 直接写 SQL
+   233	- **跨层调用**：禁止跳层（如 API 直接访问 DB），必须经过 Service 层
+   234	
+   235	---
+   236	
+   237	## 3. 核心业务链路
+   238	
+   239	### 3.1 多 Agent 任务执行链路（核心链路）
+   240	
+   241	#### 3.1.1 状态图定义
+   242	
+   243	LangGraph StateGraph 包含三个 Agent 节点和一个条件路由：
+   244	
+   245	```mermaid
+   246	stateDiagram-v2
+   247	    [*] --> Planner: 输入任务描述
+   248	    Planner --> Executor: 拆解为子任务列表
+   249	    Executor --> Reviewer: 子任务执行结果
+   250	    Reviewer --> Executor: 不通过，需修正<br/>(max_retry=2)
+   251	    Reviewer --> Aggregator: 通过
+   252	    Aggregator --> [*]: 最终输出
+   253	```
+   254	
+   255	**三个 Agent 角色定义**：
+   256	
+   257	| 角色 | 职责 | 系统提示词核心 | 可调用工具 |
+   258	|---|---|---|---|
+   259	| Planner | 任务拆解、子任务排序、依赖分析 | "你是任务规划专家，将复杂任务拆解为可独立执行的子任务" | 无（纯推理） |
+   260	| Executor | 执行单个子任务，调用 MCP 工具获取信息 | "你是执行专家，使用可用工具完成子任务" | 全部 MCP 工具 |
+   261	| Reviewer | 审查执行结果，判断是否满足子任务目标 | "你是质量审查员，检查结果是否准确、完整、符合要求" | 无（纯推理） |
+   262	| Aggregator | 汇总所有子任务结果，生成最终输出 | "你是汇总专家，整合各子任务结果为连贯的最终答案" | 无（纯推理） |
+   263	
+   264	#### 3.1.2 端到端调用时序
+   265	
+   266	```mermaid
+   267	sequenceDiagram
+   268	    participant U as 用户/前端
+   269	    participant API as FastAPI
+   270	    participant Q as Celery+Redis
+   271	    participant W as Celery Worker
+   272	    participant LG as LangGraph
+   273	    participant P as Planner Agent
+   274	    participant E as Executor Agent
+   275	    participant R as Reviewer Agent
+   276	    participant MCP as MCP Server
+   277	    participant LLM as LLM Gateway
+   278	    participant DB as SQLite
+   279	
+   280	    U->>API: POST /api/v1/tasks {input, scenario}
+   281	    API->>DB: INSERT task(status=PENDING)
+   282	    API->>Q: delay orchestration_task(task_id)
+   283	    API-->>U: 202 {task_id, status:PENDING}
+   284	
+   285	    Q->>W: 分发任务
+   286	    W->>DB: UPDATE task(status=RUNNING)
+   287	    W->>LG: StateGraph.invoke(input, config={"configurable": {"thread_id": task_id}})
+   288	
+   289	    LG->>P: Planner 节点
+   290	    P->>LLM: chat(messages)
+   291	    LLM-->>P: 子任务列表 JSON
+   292	    P-->>LG: state.subtasks = [...]
+   293	
+   294	    loop 每个子任务
+   295	        LG->>E: Executor 节点
+   296	        E->>MCP: list_tools()
+   297	        MCP-->>E: 工具清单
+   298	        E->>LLM: chat(messages + tools)
+   299	        LLM-->>E: tool_call(name, args)
+   300	        E->>MCP: call_tool(name, args)
+   301	        MCP-->>E: tool_result
+   302	        E->>LLM: chat(messages + tool_result)
+   303	        LLM-->>E: 子任务结果
+   304	        E-->>LG: state.results[subtask_id] = result
+   305	
+   306	        LG->>R: Reviewer 节点
+   307	        R->>LLM: chat(subtask + result + criteria)
+   308	        LLM-->>R: {pass: bool, feedback: str}
+   309	        alt 不通过且 retry < 2
+   310	            R-->>LG: state.need_revise = True
+   311	            LG->>E: 重新执行（携带 feedback）
+   312	        else 通过
+   313	            R-->>LG: state.reviewed[subtask_id] = True
+   314	        end
+   315	    end
+   316	
+   317	    LG->>P: Aggregator 节点（复用 Planner 或独立）
+   318	    P->>LLM: chat(all_subtask_results)
+   319	    LLM-->>P: 最终输出
+   320	    LG-->>W: 最终状态
+   321	
+   322	    W->>DB: UPDATE task(status=COMPLETED, result=...)
+   323	    W->>DB: 写入 agent_messages / tool_calls 记录
+   324	```
+   325	
+   326	#### 3.1.3 各节点输入/处理/输出明细
+   327	
+   328	| 节点 | 输入 | 处理逻辑 | 输出 |
+   329	|---|---|---|---|
+   330	| **API 提交** | `{input: str, scenario: str, max_rounds: int?}` | 校验输入 → 创建 DB 记录 → 投递 Celery 任务 | `{task_id: str, status: "PENDING"}` |
+   331	| **Planner** | `state.input`（原始任务描述） | LLM 推理 → 解析 JSON 子任务列表 → 写入 `state.subtasks` | `state.subtasks: List[{id, title, description, depends_on}]` |
+   332	| **Executor** | `state.subtasks[current]`、`state.tools` | 循环：LLM 决策调工具 → MCP 调用 → 结果回填 → 直到 LLM 输出最终答案或达到 max_tool_calls(=5) | `state.results[subtask_id]: str` |
+   333	| **Reviewer** | `state.subtasks[current]`、`state.results[subtask_id]` | LLM 按评分标准判断 pass/fail → 不通过则生成修正反馈 | `state.review[subtask_id]: {pass: bool, feedback: str}` |
+   334	| **Aggregator** | `state.results`（全部子任务结果） | LLM 整合为连贯最终输出 | `state.final_output: str` |
+   335	| **结果持久化** | `state.final_output`、全量中间状态 | 写入 task 表 + agent_messages 表 + tool_calls 表 | 任务状态更新为 COMPLETED |
+   336	
+   337	### 3.2 MCP 工具调用链路
+   338	
+   339	```mermaid
+   340	sequenceDiagram
+   341	    participant E as Executor Agent
+   342	    participant MC as MCP Client
+   343	    participant MS as MCP Server
+   344	    participant TA as 工具适配器
+   345	
+   346	    Note over E,TA: 初始化阶段
+   347	    E->>MC: 创建 ClientSession(stdio)
+   348	    MC->>MS: 启动子进程，stdio 握手
+   349	    MS-->>MC: {protocol_version, server_info}
+   350	    MC->>MS: tools/list
+   351	    MS-->>MC: [{name, description, inputSchema}]
+   352	    MC-->>E: 工具清单（注入 LLM function calling）
+   353	
+   354	    Note over E,TA: 调用阶段
+   355	    E->>MC: call_tool(name="web_search", args={query:"..."})
+   356	    MC->>MS: JSON-RPC tools/call {name, arguments}
+   357	    MS->>TA: 路由到对应适配器
+   358	    TA->>TA: JSON Schema 参数校验
+   359	    TA->>TA: 执行工具逻辑
+   360	    TA-->>MS: {content: [{type:"text", text:"..."}]}
+   361	    MS-->>MC: JSON-RPC 响应
+   362	    MC-->>E: ToolMessage(content="...")
+   363	```
+   364	
+   365	**工具适配器接口规范**：
+   366	
+   367	```python
+   368	class ToolAdapter(Protocol):
+   369	    name: str
+   370	    description: str
+   371	    input_schema: dict  # JSON Schema
+   372	
+   373	    async def execute(self, **kwargs) -> str:
+   374	        """执行工具，返回文本结果"""
+   375	        ...
+   376	```
+   377	
+   378	新增工具只需实现该 Protocol 并在 `tools/registry.py` 注册，无需修改 Agent 核心代码（满足 T-03）。
+   379	
+   380	### 3.3 评测执行链路
+   381	
+   382	```mermaid
+   383	flowchart TD
+   384	    A[POST /api/v1/eval/runs] --> B[创建 eval_run 记录]
+   385	    B --> C[加载用例库 eval_cases]
+   386	    C --> D{用例数 > 0?}
+   387	    D -->|否| Z[报错: 用例库为空]
+   388	    D -->|是| E[投递 Celery 评测任务]
+   389	    E --> F[逐用例执行]
+   390	    F --> G[调用 Agent 编排获取输出]
+   391	    G --> H[LLM-as-Judge 4维度评分]
+   392	    H --> I[写入 eval_scores]
+   393	    I --> J{还有用例?}
+   394	    J -->|是| F
+   395	    J -->|否| K[汇总统计: 均值/百分位/通过率]
+   396	    K --> L[生成 HTML + JSON 报告]
+   397	    L --> M[更新 eval_run status=COMPLETED]
+   398	    M --> N[报告可下载]
+   399	```
+   400	
+   401	**评测四维度定义**（E-01）：
+   402	
+   403	| 维度 | 评分范围 | Judge 提示词要点 |
+   404	|---|---|---|
+   405	| 准确性（accuracy） | 0-10 | 事实是否正确，有无幻觉 |
+   406	| 相关性（relevance） | 0-10 | 是否回应了问题核心，有无答非所问 |
+   407	| 完整性（completeness） | 0-10 | 是否覆盖了问题的所有方面 |
+   408	| 格式合规性（format） | 0-10 | 是否符合要求的输出格式/结构 |
+   409	
+   410	### 3.4 任务状态查询链路
+   411	
+   412	```mermaid
+   413	sequenceDiagram
+   414	    participant U as 前端
+   415	    participant API as FastAPI
+   416	    participant DB as SQLite
+   417	    participant REDIS as Redis 缓存
+   418	
+   419	    U->>API: GET /api/v1/tasks/{task_id}
+   420	    API->>REDIS: GET task:{task_id}
+   421	    alt 缓存命中
+   422	        REDIS-->>API: 缓存数据
+   423	    else 缓存未命中
+   424	        API->>DB: SELECT * FROM tasks WHERE id = ?
+   425	        DB-->>API: 任务记录
+   426	        API->>REDIS: SETEX task:{task_id} 30s
+   427	    end
+   428	    API-->>U: {task_id, status, result, created_at, ...}
+   429	```
+   430	
+   431	任务状态枚举：`PENDING → RUNNING → COMPLETED / FAILED / CANCELLED`
+   432	
+   433	### 3.5 报告生成与下载链路
+   434	
+   435	1. 评测完成后，`ReportGenerator` 用 Jinja2 模板渲染 HTML 报告
+   436	2. 同时生成 JSON 格式原始数据报告
+   437	3. 文件写入 `data/reports/{run_id}.html` 和 `.json`
+   438	4. 报告元数据（路径、大小、生成时间）写入 `eval_reports` 表
+   439	5. `GET /api/v1/eval/runs/{run_id}/report` 返回文件下载流（`Content-Disposition: attachment`）
+   440	
+   441	---
+   442	
+   443	## 4. 数据模型设计
+   444	
+   445	### 4.1 ER 关系图
+   446	
+   447	```mermaid
+   448	erDiagram
+   449	    TASKS ||--o{ TASK_EXECUTIONS : has
+   450	    TASKS ||--o{ AGENT_MESSAGES : has
+   451	    TASKS ||--o{ TOOL_CALLS : has
+   452	    EVAL_RUNS ||--o{ EVAL_SCORES : has
+   453	    EVAL_RUNS ||--|| EVAL_REPORTS : produces
+   454	    EVAL_CASES ||--o{ EVAL_SCORES : referenced_by
+   455	    EVAL_RUNS }o--|| TASKS : triggers
+   456	
+   457	    TASKS {
+   458	        string id PK
+   459	        string input
+   460	        string scenario
+   461	        string status
+   462	        text result
+   463	        string error_message
+   464	        int max_rounds
+   465	        int current_round
+   466	        datetime created_at
+   467	        datetime started_at
+   468	        datetime completed_at
+   469	        float duration_seconds
+   470	    }
+   471	
+   472	    TASK_EXECUTIONS {
+   473	        int id PK
+   474	        string task_id FK
+   475	        string agent_role
+   476	        string node_name
+   477	        text input_data
+   478	        text output_data
+   479	        int round_number
+   480	        datetime created_at
+   481	    }
+   482	
+   483	    AGENT_MESSAGES {
+   484	        int id PK
+   485	        string task_id FK
+   486	        string role
+   487	        string agent_role
+   488	        text content
+   489	        string message_type
+   490	        int round_number
+   491	        int sequence
+   492	        datetime created_at
+   493	    }
+   494	
+   495	    TOOL_CALLS {
+   496	        int id PK
+   497	        string task_id FK
+   498	        string tool_name
+   499	        text arguments
+   500	        text result
+   501	        string status
+   502	        int duration_ms
+   503	        string error_message
+   504	        datetime created_at
+   505	    }
+   506	
+   507	    EVAL_CASES {
+   508	        string id PK
+   509	        string category
+   510	        text input
+   511	        text expected_output
+   512	        text scoring_criteria
+   513	        int difficulty
+   514	        boolean enabled
+   515	    }
+   516	
+   517	    EVAL_RUNS {
+   518	        string id PK
+   519	        string name
+   520	        string model_config
+   521	        string status
+   522	        int total_cases
+   523	        int completed_cases
+   524	        int passed_cases
+   525	        float avg_score
+   526	        datetime created_at
+   527	        datetime completed_at
+   528	    }
+   529	
+   530	    EVAL_SCORES {
+   531	        int id PK
+   532	        string run_id FK
+   533	        string case_id FK
+   534	        string task_id FK
+   535	        float accuracy_score
+   536	        float relevance_score
+   537	        float completeness_score
+   538	        float format_score
+   539	        float overall_score
+   540	        text judge_feedback
+   541	        datetime created_at
+   542	    }
+   543	
+   544	    EVAL_REPORTS {
+   545	        int id PK
+   546	        string run_id FK
+   547	        string report_type
+   548	        string file_path
+   549	        int file_size_bytes
+   550	        datetime created_at
+   551	    }
+   552	```
+   553	
+   554	### 4.2 核心表结构详细设计
+   555	
+   556	#### 4.2.1 tasks（任务表）
+   557	
+   558	| 字段名 | 类型 | 约束 | 说明 |
+   559	|---|---|---|---|
+   560	| `id` | VARCHAR(36) | PK | UUID v4，任务唯一标识 |
+   561	| `input` | TEXT | NOT NULL | 用户原始输入 |
+   562	| `scenario` | VARCHAR(64) | NOT NULL, DEFAULT 'default' | 场景标识（如 research / code_review） |
+   563	| `status` | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | 任务状态：PENDING/RUNNING/COMPLETED/FAILED/CANCELLED |
+   564	| `result` | TEXT | NULLABLE | 最终输出内容 |
+   565	| `error_message` | TEXT | NULLABLE | 失败时的错误信息 |
+   566	| `max_rounds` | INTEGER | NOT NULL, DEFAULT 5 | 最大协作轮次（M-02 ≥5） |
+   567	| `current_round` | INTEGER | NOT NULL, DEFAULT 0 | 当前执行轮次 |
+   568	| `created_at` | DATETIME | NOT NULL | 创建时间（UTC） |
+   569	| `started_at` | DATETIME | NULLABLE | 开始执行时间 |
+   570	| `completed_at` | DATETIME | NULLABLE | 完成时间 |
+   571	| `duration_seconds` | FLOAT | NULLABLE | 执行耗时（用于 P50/P95 统计） |
+   572	
+   573	**索引**：
+   574	- `idx_tasks_status` ON `(status)` — 状态筛选
+   575	- `idx_tasks_created_at` ON `(created_at DESC)` — 按时间排序
+   576	- `idx_tasks_scenario` ON `(scenario)` — 场景筛选
+   577	
+   578	#### 4.2.2 task_executions（任务执行记录表）
+   579	
+   580	| 字段名 | 类型 | 约束 | 说明 |
+   581	|---|---|---|---|
+   582	| `id` | INTEGER | PK, AUTOINCREMENT | 自增主键 |
+   583	| `task_id` | VARCHAR(36) | FK → tasks.id, NOT NULL | 关联任务 |
+   584	| `agent_role` | VARCHAR(20) | NOT NULL | planner/executor/reviewer/aggregator |
+   585	| `node_name` | VARCHAR(64) | NOT NULL | LangGraph 节点名 |
+   586	| `input_data` | TEXT | NOT NULL | 节点输入（JSON） |
+   587	| `output_data` | TEXT | NULLABLE | 节点输出（JSON） |
+   588	| `round_number` | INTEGER | NOT NULL, DEFAULT 1 | 第几轮协作 |
+   589	| `created_at` | DATETIME | NOT NULL | 执行时间 |
+   590	
+   591	**索引**：`idx_exec_task_id` ON `(task_id, round_number)`
+   592	
+   593	#### 4.2.3 agent_messages（Agent 间消息表）
+   594	
+   595	| 字段名 | 类型 | 约束 | 说明 |
+   596	|---|---|---|---|
+   597	| `id` | INTEGER | PK, AUTOINCREMENT | 自增主键 |
+   598	| `task_id` | VARCHAR(36) | FK → tasks.id, NOT NULL | 关联任务 |
+   599	| `role` | VARCHAR(20) | NOT NULL | system/user/assistant/tool |
+   600	| `agent_role` | VARCHAR(20) | NULLABLE | 发送方 Agent 角色 |
+   601	| `content` | TEXT | NOT NULL | 消息内容 |
+   602	| `message_type` | VARCHAR(20) | NOT NULL, DEFAULT 'text' | text/tool_call/tool_result |
+   603	| `round_number` | INTEGER | NOT NULL, DEFAULT 1 | 协作轮次 |
+   604	| `sequence` | INTEGER | NOT NULL | 轮次内消息序号 |
+   605	| `created_at` | DATETIME | NOT NULL | 消息时间 |
+   606	
+   607	**索引**：`idx_messages_task_round` ON `(task_id, round_number, sequence)`
+   608	
+   609	#### 4.2.4 tool_calls（工具调用记录表）
+   610	
+   611	| 字段名 | 类型 | 约束 | 说明 |
+   612	|---|---|---|---|
+   613	| `id` | INTEGER | PK, AUTOINCREMENT | 自增主键 |
+   614	| `task_id` | VARCHAR(36) | FK → tasks.id, NOT NULL | 关联任务 |
+   615	| `tool_name` | VARCHAR(64) | NOT NULL | MCP 工具名 |
+   616	| `arguments` | TEXT | NOT NULL | 调用参数（JSON） |
+   617	| `result` | TEXT | NULLABLE | 工具返回结果 |
+   618	| `status` | VARCHAR(20) | NOT NULL, DEFAULT 'SUCCESS' | SUCCESS/FAILED |
+   619	| `duration_ms` | INTEGER | NULLABLE | 调用耗时（毫秒） |
+   620	| `error_message` | TEXT | NULLABLE | 失败原因 |
+   621	| `created_at` | DATETIME | NOT NULL | 调用时间 |
+   622	
+   623	**索引**：`idx_tool_calls_task` ON `(task_id)`、`idx_tool_calls_name` ON `(tool_name)`
+   624	
+   625	#### 4.2.5 eval_cases（评测用例表）
+   626	
+   627	| 字段名 | 类型 | 约束 | 说明 |
+   628	|---|---|---|---|
+   629	| `id` | VARCHAR(36) | PK | 用例 ID（如 case-001） |
+   630	| `category` | VARCHAR(64) | NOT NULL | 用例分类（如 research/code/general） |
+   631	| `input` | TEXT | NOT NULL | 用例输入 |
+   632	| `expected_output` | TEXT | NULLABLE | 期望输出（参考，非严格匹配） |
+   633	| `scoring_criteria` | TEXT | NOT NULL | 评分标准（注入 Judge 提示词） |
+   634	| `difficulty` | INTEGER | NOT NULL, DEFAULT 1 | 难度 1-5 |
+   635	| `enabled` | BOOLEAN | NOT NULL, DEFAULT 1 | 是否启用 |
+   636	
+   637	**索引**：`idx_eval_cases_category` ON `(category, enabled)`
+   638	
+   639	#### 4.2.6 eval_runs（评测运行表）
+   640	
+   641	| 字段名 | 类型 | 约束 | 说明 |
+   642	|---|---|---|---|
+   643	| `id` | VARCHAR(36) | PK | 运行 ID |
+   644	| `name` | VARCHAR(128) | NOT NULL | 运行名称 |
+   645	| `model_config` | TEXT | NOT NULL | 模型配置快照（JSON） |
+   646	| `status` | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | PENDING/RUNNING/COMPLETED/FAILED |
+   647	| `total_cases` | INTEGER | NOT NULL, DEFAULT 0 | 总用例数 |
+   648	| `completed_cases` | INTEGER | NOT NULL, DEFAULT 0 | 已完成用例数 |
+   649	| `passed_cases` | INTEGER | NOT NULL, DEFAULT 0 | 通过用例数（overall ≥ 6 视为通过） |
+   650	| `avg_score` | FLOAT | NULLABLE | 平均总分 |
+   651	| `created_at` | DATETIME | NOT NULL | 创建时间 |
+   652	| `completed_at` | DATETIME | NULLABLE | 完成时间 |
+   653	
+   654	#### 4.2.7 eval_scores（评测评分表）
+   655	
+   656	| 字段名 | 类型 | 约束 | 说明 |
+   657	|---|---|---|---|
+   658	| `id` | INTEGER | PK, AUTOINCREMENT | 自增主键 |
+   659	| `run_id` | VARCHAR(36) | FK → eval_runs.id, NOT NULL | 关联评测运行 |
+   660	| `case_id` | VARCHAR(36) | FK → eval_cases.id, NOT NULL | 关联用例 |
+   661	| `task_id` | VARCHAR(36) | FK → tasks.id, NULLABLE | 关联的 Agent 任务 |
+   662	| `accuracy_score` | FLOAT | NOT NULL | 准确性 0-10 |
+   663	| `relevance_score` | FLOAT | NOT NULL | 相关性 0-10 |
+   664	| `completeness_score` | FLOAT | NOT NULL | 完整性 0-10 |
+   665	| `format_score` | FLOAT | NOT NULL | 格式合规性 0-10 |
+   666	| `overall_score` | FLOAT | NOT NULL | 总分（加权平均） |
+   667	| `judge_feedback` | TEXT | NULLABLE | Judge 文字反馈 |
+   668	| `created_at` | DATETIME | NOT NULL | 评分时间 |
+   669	
+   670	**索引**：`idx_scores_run` ON `(run_id)`、`idx_scores_case` ON `(case_id)`
+   671	
+   672	#### 4.2.8 eval_reports（评测报告表）
+   673	
+   674	| 字段名 | 类型 | 约束 | 说明 |
+   675	|---|---|---|---|
+   676	| `id` | INTEGER | PK, AUTOINCREMENT | 自增主键 |
+   677	| `run_id` | VARCHAR(36) | FK → eval_runs.id, NOT NULL, UNIQUE | 关联运行 |
+   678	| `report_type` | VARCHAR(20) | NOT NULL | html/json |
+   679	| `file_path` | VARCHAR(512) | NOT NULL | 本地文件路径 |
+   680	| `file_size_bytes` | INTEGER | NOT NULL | 文件大小 |
+   681	| `created_at` | DATETIME | NOT NULL | 生成时间 |
+   682	
+   683	### 4.3 字段规范
+   684	
+   685	| 规范项 | 规则 |
+   686	|---|---|
+   687	| 主键 | 业务表用 VARCHAR(36) UUID v4；关联表用 INTEGER AUTOINCREMENT |
+   688	| 时间字段 | 统一 DATETIME，存储 UTC，命名 `xxx_at` |
+   689	| 状态字段 | VARCHAR(20)，大写蛇形（如 PENDING、RUNNING），应用层枚举校验 |
+   690	| 金额/分数 | FLOAT，评分统一 0-10 范围，保留 2 位小数 |
+   691	| JSON 字段 | 用 TEXT 存储，应用层 Pydantic 模型序列化/反序列化 |
+   692	| 软删除 | 不使用软删除，数据直接 DELETE（评测/任务数据可重建） |
+   693	| 字符集 | SQLite 默认 UTF-8，确保中文存储正常 |
+   694	
+   695	### 4.4 表关联关系汇总
+   696	
+   697	| 主表 | 从表 | 关系 | 外键 | 级联策略 |
+   698	|---|---|---|---|---|
+   699	| tasks | task_executions | 1:N | task_id | ON DELETE CASCADE |
+   700	| tasks | agent_messages | 1:N | task_id | ON DELETE CASCADE |
+   701	| tasks | tool_calls | 1:N | task_id | ON DELETE CASCADE |
+   702	| eval_runs | eval_scores | 1:N | run_id | ON DELETE CASCADE |
+   703	| eval_runs | eval_reports | 1:1 | run_id | ON DELETE CASCADE |
+   704	| eval_cases | eval_scores | 1:N | case_id | ON DELETE RESTRICT |
+   705	| tasks | eval_scores | 1:N | task_id | ON DELETE SET NULL |
+   706	
+   707	### 4.5 LangGraph 检查点存储
+   708	
+   709	LangGraph 的 `SqliteSaver` 使用独立的 SQLite 文件（`data/checkpoints.db`），内部表结构由 LangGraph 管理（`checkpoints`、`checkpoint_writes`、`checkpoint_blobs`），不与业务库混用。通过 `thread_id = task_id` 关联业务任务，实现任意任务的状态回放（M-04）。
+   710	
+   711	---
+   712	
+   713	## 5. 接口规范定义
+   714	
+   715	### 5.1 统一请求/返回格式
+   716	
+   717	#### 5.1.1 成功响应
+   718	
+   719	所有接口返回统一信封格式：
+   720	
+   721	```json
+   722	{
+   723	  "code": 0,
+   724	  "message": "success",
+   725	  "data": { ... },
+   726	  "request_id": "req_abc123",
+   727	  "timestamp": "2026-10-05T12:00:00Z"
+   728	}
+   729	```
+   730	
+   731	| 字段 | 类型 | 说明 |
+   732	|---|---|---|
+   733	| `code` | int | 业务状态码，0 表示成功，非 0 表示错误 |
+   734	| `message` | string | 状态描述 |
+   735	| `data` | object/array/null | 业务数据 |
+   736	| `request_id` | string | 请求唯一标识，用于日志追踪 |
+   737	| `timestamp` | string | 响应时间（ISO 8601 UTC） |
+   738	
+   739	#### 5.1.2 分页响应
+   740	
+   741	列表接口的 `data` 字段包含分页信息：
+   742	
+   743	```json
+   744	{
+   745	  "code": 0,
+   746	  "message": "success",
+   747	  "data": {
+   748	    "items": [ ... ],
+   749	    "total": 100,
+   750	    "page": 1,
+   751	    "page_size": 20,
+   752	    "total_pages": 5
+   753	  },
+   754	  "request_id": "req_abc123",
+   755	  "timestamp": "2026-10-05T12:00:00Z"
+   756	}
+   757	```
+   758	
+   759	分页参数：`page`（默认 1）、`page_size`（默认 20，最大 100）。
+   760	
+   761	#### 5.1.3 错误响应
+   762	
+   763	```json
+   764	{
+   765	  "code": 40001,
+   766	  "message": "任务输入不能为空",
+   767	  "data": null,
+   768	  "request_id": "req_abc123",
+   769	  "timestamp": "2026-10-05T12:00:00Z",
+   770	  "details": {
+   771	    "field": "input",
+   772	    "reason": "input is required"
+   773	  }
+   774	}
+   775	```
+   776	
+   777	### 5.2 错误码规范
+   778	
+   779	采用 5 位数字错误码，前 2 位为模块，后 3 位为具体错误：
+   780	
+   781	| 错误码范围 | 模块 | HTTP 状态码 |
+   782	|---|---|---|
+   783	| 0 | 成功 | 200 |
+   784	| 10000-10999 | 通用/系统错误 | 500 |
+   785	| 20000-20999 | 任务模块错误 | 400/404/409 |
+   786	| 30000-30999 | 评测模块错误 | 400/404 |
+   787	| 40000-40999 | 工具/MCP 模块错误 | 400/502 |
+   788	| 50000-50999 | LLM 网关错误 | 502/504 |
+   789	
+   790	**常用错误码**：
+   791	
+   792	| 错误码 | message | HTTP | 说明 |
+   793	|---|---|---|---|
+   794	| 10001 | 内部服务器错误 | 500 | 未捕获异常 |
+   795	| 10002 | 请求参数校验失败 | 400 | Pydantic 校验失败 |
+   796	| 10003 | 资源不存在 | 404 | 通用 404 |
+   797	| 10004 | 请求过于频繁 | 429 | 限流 |
+   798	| 20001 | 任务输入不能为空 | 400 | input 字段为空 |
+   799	| 20002 | 任务不存在 | 404 | task_id 无效 |
+   800	| 20003 | 任务状态不允许该操作 | 409 | 如对已完成任务取消 |
+   801	| 20004 | 任务执行失败 | 500 | Worker 执行异常 |
+   802	| 30001 | 评测用例库为空 | 400 | 无可用用例 |
+   803	| 30002 | 评测运行不存在 | 404 | run_id 无效 |
+   804	| 30003 | 报告尚未生成 | 404 | 评测未完成 |
+   805	| 40001 | MCP 工具不存在 | 400 | 工具名未注册 |
+   806	| 40002 | 工具参数校验失败 | 400 | JSON Schema 校验不通过 |
+   807	| 40003 | 工具执行超时 | 504 | 工具调用超时 |
+   808	| 50001 | LLM API 调用失败 | 502 | 外部 API 错误 |
+   809	| 50002 | LLM API 超时 | 504 | 超过超时阈值 |
+   810	| 50003 | LLM API 配额不足 | 429 | 触发预算保护 |
+   811	
+   812	### 5.3 鉴权规则
+   813	
+   814	鉴于基线明确排除多租户/用户权限体系（X-02），采用**轻量级 API Key 机制**：
+   815	
+   816	- 环境变量 `API_KEY` 配置一个全局密钥（可选，未设置则不鉴权）
+   817	- 客户端通过请求头 `X-API-Key: <key>` 传递
+   818	- 仅对写操作（POST/PUT/DELETE）强制鉴权，读操作（GET）开放
+   819	- 密钥不存入数据库，仅在内存中比对
+   820	- 预留 `AuthMiddleware` 扩展点，未来可替换为 JWT/OAuth
+   821	
+   822	### 5.4 核心接口清单
+   823	
+   824	#### 5.4.1 任务管理接口
+   825	
+   826	| 方法 | 路径 | 说明 | 请求体 | 响应 data |
+   827	|---|---|---|---|---|
+   828	| POST | `/api/v1/tasks` | 提交任务 | `{input: str, scenario: str?, max_rounds: int?}` | `{task_id, status}` |
+   829	| GET | `/api/v1/tasks` | 任务列表（分页） | query: `page, page_size, status?, scenario?` | 分页任务列表 |
+   830	| GET | `/api/v1/tasks/{task_id}` | 查询任务状态 | — | 任务详情（含状态、结果、耗时） |
+   831	| GET | `/api/v1/tasks/{task_id}/result` | 获取任务结果 | — | `{task_id, result, status}` |
+   832	| GET | `/api/v1/tasks/{task_id}/trace` | 获取执行链路 | — | agent_messages + tool_calls 全量 |
+   833	| POST | `/api/v1/tasks/{task_id}/cancel` | 取消任务 | — | `{task_id, status: CANCELLED}` |
+   834	
+   835	#### 5.4.2 评测管理接口
+   836	
+   837	| 方法 | 路径 | 说明 | 请求体 | 响应 data |
+   838	|---|---|---|---|---|
+   839	| POST | `/api/v1/eval/runs` | 触发评测 | `{name: str?, case_ids: [str]?, model_config: dict?, concurrency: int?}` | `{run_id, status}` |
+   840	| GET | `/api/v1/eval/runs` | 评测运行列表 | query: `page, page_size` | 分页运行列表 |
+   841	| GET | `/api/v1/eval/runs/{run_id}` | 评测运行状态 | — | 运行详情（含进度、平均分） |
+   842	| GET | `/api/v1/eval/runs/{run_id}/scores` | 评测评分明细 | query: `page, page_size` | 分页评分列表 |
+   843	| GET | `/api/v1/eval/runs/{run_id}/report` | 下载评测报告 | query: `format=html\|json` | 文件下载流 |
+   844	| GET | `/api/v1/eval/cases` | 评测用例列表 | query: `page, page_size, category?, enabled?` | 分页用例列表 |
+   845	| GET | `/api/v1/eval/cases/{case_id}` | 用例详情 | — | 用例完整信息 |
+   846	
+   847	#### 5.4.3 工具管理接口
+   848	
+   849	| 方法 | 路径 | 说明 | 响应 data |
+   850	|---|---|---|---|
+   851	| GET | `/api/v1/tools` | 列出已注册 MCP 工具 | `[{name, description, input_schema}]` |
+   852	| POST | `/api/v1/tools/{name}/invoke` | 手动调用工具（调试用） | `{result, duration_ms}` |
+   853	
+   854	#### 5.4.4 系统接口
+   855	
+   856	| 方法 | 路径 | 说明 | 响应 data |
+   857	|---|---|---|---|
+   858	| GET | `/api/v1/health` | 健康检查 | `{status, db, redis, llm, version}` |
+   859	| GET | `/api/v1/metrics` | Prometheus 指标 | 文本格式指标 |
+   860	| GET | `/api/v1/config` | 当前配置（脱敏） | `{model, tools_enabled, scenarios}` |
+   861	
+   862	**接口总数**：任务 6 + 评测 7 + 工具 2 + 系统 3 = **18 个端点**，远超基线 S-02 要求的 ≥5 个。
+   863	
+   864	### 5.5 OpenAPI 文档
+   865	
+   866	FastAPI 自动生成：
+   867	- Swagger UI：`/docs`
+   868	- ReDoc：`/redoc`
+   869	- OpenAPI JSON：`/openapi.json`
+   870	
+   871	所有接口的请求/响应模型通过 Pydantic 定义，自动生成文档，满足基线"API 文档（OpenAPI 格式）"交付要求。
+   872	
+   873	---
+   874	
+   875	## 6. 部署架构设计
+   876	
+   877	### 6.1 部署拓扑
+   878	
+   879	```mermaid
+   880	graph LR
+   881	    subgraph Docker Host（单机）
+   882	        subgraph docker-compose
+   883	            API[api-server<br/>FastAPI]
+   884	            WORKER[celery-worker<br/>Agent 执行]
+   885	            BEAT[celery-beat<br/>定时清理]
+   886	            REDIS[redis<br/>队列/缓存]
+   887	            DB_VOL[data volume<br/>SQLite + 报告]
+   888	        end
+   889	        OLLAMA[ollama<br/>可选, 本地模型]
+   890	    end
+   891	
+   892	    USER[用户浏览器] -->|HTTP :8000| API
+   893	    API -->|任务投递| REDIS
+   894	    REDIS -->|任务分发| WORKER
+   895	    API -->|读写| DB_VOL
+   896	    WORKER -->|读写| DB_VOL
+   897	    WORKER -->|LLM 调用| EXT_API[外部 LLM API]
+   898	    WORKER -.->|可选本地推理| OLLAMA
+   899	    BEAT -->|定时任务| REDIS
+   900	```
+   901	
+   902	### 6.2 docker-compose 服务定义
+   903	
+   904	| 服务名 | 镜像 | 端口 | 依赖 | 说明 |
+   905	|---|---|---|---|---|
+   906	| `api` | 本地构建（python:3.12-slim） | 8000:8000 | redis | FastAPI 服务，托管前端静态文件 |
+   907	| `worker` | 同 api 镜像（command: celery -A app.worker worker） | — | redis | Celery Worker，执行 Agent 编排任务 |
+   908	| `beat` | 同 api 镜像（command: celery -A app.worker beat） | — | redis | 定时任务（清理过期任务、统计归档） |
+   909	| `redis` | redis:7.4-alpine | 6379（仅内部） | — | Celery broker + 缓存 |
+   910	| `ollama`（可选） | ollama/ollama:latest | 11434（仅内部） | — | 本地模型，通过 profile 选择性启动 |
+   911	
+   912	**启动命令**：`docker-compose up -d`（满足 S-04 一键启动）
+   913	
+   914	**可选本地模型启动**：`docker-compose --profile ollama up -d`
+   915	
+   916	### 6.3 容器构建策略
+   917	
+   918	采用**多阶段构建**减小镜像体积：
+   919	
+   920	```
+   921	Stage 1 (builder): python:3.12-slim → 安装依赖 → 编译
+   922	Stage 2 (runtime): python:3.12-slim → 拷贝 site-packages + 代码 → 非 root 用户运行
+   923	```
+   924	
+   925	- 最终镜像目标 < 500MB
+   926	- 不安装开发依赖（pytest、ruff、mypy）
+   927	- 健康检查：`curl -f http://localhost:8000/api/v1/health`
+   928	
+   929	### 6.4 高可用方案
+   930	
+   931	基线 X-06 明确"生产级高可用/灾备"不在范围内，但设计上保留以下基础保障：
+   932	
+   933	| 维度 | 方案 | 说明 |
+   934	|---|---|---|
+   935	| API 无状态 | FastAPI 实例无状态，可启动多个副本（`docker-compose up --scale api=3`） | 需前置负载均衡（如 nginx），默认单副本 |
+   936	| Worker 水平扩展 | Celery Worker 可多副本，`--concurrency` 控制单进程并发 | 默认 concurrency=2，可根据 CPU 调整 |
+   937	| 任务持久化 | Redis 持久化（AOF）+ SQLite 任务状态 | 容器重启不丢失任务 |
+   938	| 检查点恢复 | LangGraph SqliteSaver 持久化状态 | Worker 崩溃后可从检查点恢复（需手动触发） |
+   939	| 健康检查 | docker-compose healthcheck 自动重启异常容器 | `restart: unless-stopped` |
+   940	
+   941	### 6.5 弹性扩缩容策略
+   942	
+   943	单机部署下的"弹性"体现在配置层面：
+   944	
+   945	| 场景 | 策略 | 配置方式 |
+   946	|---|---|---|
+   947	| 评测批量执行（30 用例并发） | 临时提升 Worker 并发数 | `CELERY_WORKER_CONCURRENCY=4` 环境变量 |
+   948	| API 高并发查询 | 增加 API 副本 | `docker-compose up --scale api=N` |
+   949	| 低峰期 | 降低并发节省资源 | 默认 concurrency=2 |
+   950	| 内存不足 | 限制 Worker 并发 + LLM 调用串行化 | `EVAL_MAX_CONCURRENT=2` 配置 |
+   951	
+   952	### 6.6 环境划分
+   953	
+   954	| 环境 | 用途 | 配置特点 | 数据 |
+   955	|---|---|---|---|
+   956	| **dev**（本地开发） | 开发者本机调试 | 热重载（uvicorn --reload）、Mock LLM 模式、SQLite 内存库或文件库 | 合成测试数据 |
+   957	| **test**（自动化测试） | CI/CD 单元测试 + 集成测试 | pytest 运行、临时 SQLite 文件、Mock 外部 API | 测试用例固定数据集 |
+   958	| **prod**（演示/交付） | 最终演示与交付 | docker-compose 启动、真实 LLM API、持久化数据卷 | 评测用例库 + 运行记录 |
+   959	
+   960	环境通过 `APP_ENV=dev|test|prod` 环境变量切换，配置文件 `config/{env}.yaml` 差异化管理。
+   961	
+   962	### 6.7 数据卷与持久化
+   963	
+   964	| 挂载路径 | 内容 | 备份策略 |
+   965	|---|---|---|
+   966	| `/app/data/db/` | SQLite 数据库文件 | 定期复制到 `backups/`（beat 每日任务） |
+   967	| `/app/data/checkpoints/` | LangGraph 检查点 | 同 DB 备份 |
+   968	| `/app/data/reports/` | 评测报告文件 | 报告可重新生成，不强制备份 |
+   969	| `/app/logs/` | 应用日志 | 按天轮转，保留 7 天 |
+   970	
+   971	---
+   972	
+   973	## 7. 监控与运维
+   974	
+   975	### 7.1 监控指标体系
+   976	
+   977	#### 7.1.1 业务指标
+   978	
+   979	| 指标名 | 类型 | 说明 | 采集点 |
+   980	|---|---|---|---|
+   981	| `tasks_total` | Counter | 任务提交总数 | API 提交时 |
+   982	| `tasks_completed_total` | Counter | 任务完成数 | Worker 完成时 |
+   983	| `tasks_failed_total` | Counter | 任务失败数 | Worker 异常时 |
+   984	| `task_duration_seconds` | Histogram | 任务执行耗时分布（buckets: 5/10/30/60/90/120） | Worker 完成时 |
+   985	| `task_completion_rate` | Gauge | 任务完成率（滑动窗口） | 定时计算 |
+   986	| `eval_runs_total` | Counter | 评测运行总数 | 评测创建时 |
+   987	| `eval_avg_score` | Gauge | 最近一次评测平均分 | 评测完成时 |
+   988	| `eval_case_pass_rate` | Gauge | 用例通过率 | 评测完成时 |
+   989	| `tool_calls_total` | Counter | 工具调用总数 | MCP 调用时 |
+   990	| `tool_call_success_rate` | Gauge | 工具调用成功率 | 定时计算 |
+   991	| `tool_call_duration_ms` | Histogram | 工具调用耗时 | MCP 返回时 |
+   992	| `llm_calls_total` | Counter | LLM 调用总数 | LLM Gateway |
+   993	| `llm_call_duration_ms` | Histogram | LLM 调用耗时 | LLM Gateway |
+   994	| `llm_token_usage_total` | Counter | Token 消耗总量 | LLM Gateway 响应解析 |
+   995	
+   996	#### 7.1.2 系统指标
+   997	
+   998	| 指标名 | 类型 | 说明 |
+   999	|---|---|---|
+  1000	| `http_requests_total` | Counter | HTTP 请求总数（按路径、方法、状态码标签） |
+  1001	| `http_request_duration_seconds` | Histogram | HTTP 请求延迟 |
+  1002	| `http_requests_in_progress` | Gauge | 正在处理的请求数 |
+  1003	| `celery_task_queue_length` | Gauge | Celery 队列待处理任务数 |
+  1004	| `celery_worker_active_tasks` | Gauge | Worker 活跃任务数 |
+  1005	| `sqlite_db_size_bytes` | Gauge | 数据库文件大小 |
+  1006	| `redis_connected_clients` | Gauge | Redis 连接数 |
+  1007	| `process_memory_bytes` | Gauge | 进程内存占用 |
+  1008	| `process_cpu_seconds_total` | Counter | CPU 时间累计 |
+  1009	
+  1010	指标通过 `prometheus-client` 库暴露在 `/api/v1/metrics` 端点，Prometheus 文本格式。
+  1011	
+  1012	### 7.2 告警规则
+  1013	
+  1014	单机部署下告警通过日志 + 指标阈值触发，输出到 stderr 和告警日志文件（预留 Webhook 扩展）：
+  1015	
+  1016	| 告警名 | 条件 | 级别 | 动作 |
+  1017	|---|---|---|---|
+  1018	| API 高错误率 | 5xx 错误率 > 10%（1 分钟窗口） | P1 | 记录告警日志，控制台输出 |
+  1019	| 任务超时 | 单任务执行 > 120s（超过 P95 目标 90s 的 1.3 倍） | P2 | 记录告警，标记任务为异常 |
+  1020	| 任务失败率 | 任务失败率 > 20%（5 分钟窗口） | P1 | 记录告警 |
+  1021	| LLM 调用失败率 | LLM 调用失败率 > 15% | P2 | 记录告警，触发降级（切换备用模型） |
+  1022	| 工具调用失败率 | 工具调用成功率 < 90%（低于 T-02 目标） | P2 | 记录告警 |
+  1023	| 队列积压 | Celery 队列长度 > 50 且持续 2 分钟 | P2 | 记录告警，建议扩容 Worker |
+  1024	| 磁盘空间 | 数据目录 > 1.5GB（接近 2GB 上限） | P1 | 记录告警，触发清理 |
+  1025	| API 预算 | 累计 LLM 费用 > ¥180（接近 ¥200 上限） | P1 | 记录告警，自动切换 Mock 模式 |
+  1026	
+  1027	### 7.3 运维流程
+  1028	
+  1029	#### 7.3.1 启动流程
+  1030	
+  1031	```bash
+  1032	# 1. 克隆仓库
+  1033	git clone <repo> && cd <project>
+  1034	
+  1035	# 2. 配置环境变量
+  1036	cp .env.example .env
+  1037	# 编辑 .env，填入 LLM_API_KEY
+  1038	
+  1039	# 3. 一键启动
+  1040	docker-compose up -d
+  1041	
+  1042	# 4. 验证
+  1043	curl http://localhost:8000/api/v1/health
+  1044	# 预期: {"status": "ok", ...}
+  1045	
+  1046	# 5. 初始化评测用例（首次）
+  1047	docker-compose exec api python -m app.cli init-cases
+  1048	```
+  1049	
+  1050	#### 7.3.2 停止与重启
+  1051	
+  1052	```bash
+  1053	# 停止所有服务（保留数据）
+  1054	docker-compose down
+  1055	
+  1056	# 重启 API（不影响队列中的任务）
+  1057	docker-compose restart api
+  1058	
+  1059	# 重启 Worker（在途任务可能丢失，需检查点恢复）
+  1060	docker-compose restart worker
+  1061	```
+  1062	
+  1063	#### 7.3.3 日志查看
+  1064	
+  1065	```bash
+  1066	# API 日志
+  1067	docker-compose logs -f api
+  1068	
+  1069	# Worker 日志（含 Agent 执行详情）
+  1070	docker-compose logs -f worker
+  1071	
+  1072	# 按 trace_id 过滤
+  1073	docker-compose logs worker | grep "trace_id=xxx"
+  1074	```
+  1075	
+  1076	#### 7.3.4 数据备份与恢复
+  1077	
+  1078	```bash
+  1079	# 备份（beat 每日自动执行，也可手动）
+  1080	docker-compose exec api python -m app.cli backup --output /app/data/backups/
+  1081	
+  1082	# 恢复
+  1083	docker-compose down
+  1084	cp backups/backup_YYYYMMDD.db data/db/app.db
+  1085	docker-compose up -d
+  1086	```
+  1087	
+  1088	#### 7.3.5 评测执行（CLI 方式）
+  1089	
+  1090	```bash
+  1091	# 全量评测（30 用例）
+  1092	docker-compose exec api python -m app.cli eval run --all
+  1093	
+  1094	# 指定分类评测
+  1095	docker-compose exec api python -m app.cli eval run --category research
+  1096	
+  1097	# Mock 模式（不消耗 API 额度）
+  1098	docker-compose exec api python -m app.cli eval run --all --mock
+  1099	```
+  1100	
+  1101	### 7.4 日志规范
+  1102	
+  1103	- **格式**：JSON 结构化日志，每行一个 JSON 对象
+  1104	- **必含字段**：`timestamp`、`level`、`logger`、`message`、`trace_id`、`task_id`（如有）
+  1105	- **级别**：DEBUG（开发）/ INFO（正常流程）/ WARNING（可恢复异常）/ ERROR（任务失败）/ CRITICAL（系统不可用）
+  1106	- **输出**：stdout（Docker 日志驱动收集）+ 文件（按天轮转，保留 7 天）
+  1107	- **敏感信息**：API Key、用户输入中的潜在隐私数据在日志中脱敏（`***`）
+  1108	
+  1109	---
+  1110	
+  1111	## 8. 技术风险与应对方案
+  1112	
+  1113	### 8.1 核心风险
+  1114	
+  1115	#### 风险 R-01：LangGraph 状态管理复杂度
+  1116	
+  1117	| 项 | 内容 |
+  1118	|---|---|
+  1119	| **风险描述** | 多 Agent 协作涉及 Planner→Executor→Reviewer 循环 + 条件路由，StateGraph 状态字段多、流转复杂，易出现状态不一致或死循环 |
+  1120	| **影响范围** | C-01 编排引擎，M-03 完成率、M-04 可追溯率 |
+  1121	| **概率** | 高 |
+  1122	| **严重度** | 高 |
+  1123	| **应对方案** | ① 状态字段用 Pydantic 模型严格定义，每个节点只写入自己负责的字段；② 设置 `max_rounds=5` 硬上限防止死循环（满足 M-02）；③ Reviewer 不通过时最多重试 2 次后强制通过并记录 warning；④ 每个节点入口/出口打印状态快照，便于调试；⑤ 单元测试覆盖每条状态转移路径 |
+  1124	
+  1125	#### 风险 R-02：MCP 协议稳定性与工具调用可靠性
+  1126	
+  1127	| 项 | 内容 |
+  1128	|---|---|
+  1129	| **风险描述** | MCP 协议尚在快速演进，Python SDK API 可能变更；stdio 传输在 Windows 下可能有编码/缓冲问题；工具执行异常可能导致 Agent 卡死 |
+  1130	| **影响范围** | C-02 MCP 工具层，T-02 调用成功率 |
+  1131	| **概率** | 中 |
+  1132	| **严重度** | 高 |
+  1133	| **应对方案** | ① 锁定 MCP SDK 版本（`mcp==0.1.x`），不随意升级；② 工具调用设置 30s 超时，超时返回结构化错误而非挂起；③ 工具适配器统一 try/except，异常转为 ToolMessage error 格式，Agent 可感知并决策；④ JSON Schema 参数校验在调用前执行（T-04），减少非法调用；⑤ Windows 下 stdio 强制 UTF-8 编码（`PYTHONIOENCODING=utf-8`） |
+  1134	
+  1135	#### 风险 R-03：LLM API 不稳定与预算超限
+  1136	
+  1137	| 项 | 内容 |
+  1138	|---|---|
+  1139	| **风险描述** | 外部 LLM API 可能限流、超时、返回格式异常；API 预算 ≤¥200，评测 30 用例 × 多轮调用可能超支 |
+  1140	| **影响范围** | 全链路，E-04 评测时间、Q-02 性能 |
+  1141	| **概率** | 中 |
+  1142	| **严重度** | 高 |
+  1143	| **应对方案** | ① LLM Gateway 实现指数退避重试（最多 3 次，初始 1s）；② 响应格式校验，非预期 JSON 时自动重试一次并附加格式提醒；③ **Mock 模式**：评测框架支持 `--mock` 参数，用预设响应替代真实 LLM 调用，开发调试零成本；④ Token 用量实时累计，超过 ¥180 阈值自动告警并切换 Mock；⑤ 评测用例支持分批执行（`--category` 筛选），控制单次消耗 |
+  1144	
+  1145	#### 风险 R-04：LLM-as-Judge 评分一致性不足
+  1146	
+  1147	| 项 | 内容 |
+  1148	|---|---|
+  1149	| **风险描述** | LLM 评分存在随机性，同一输出多次评分可能差异较大，Spearman 相关系数可能低于 0.7（E-05） |
+  1150	| **影响范围** | C-03 评测框架，E-05 评分一致性 |
+  1151	| **概率** | 中 |
+  1152	| **严重度** | 中 |
+  1153	| **应对方案** | ① Judge 提示词严格约束输出格式（JSON + 分数 + 理由），降低随机性；② 每个用例评分 2 次取平均，减少单次波动；③ 评分标准（`scoring_criteria`）在用例中明确定义，Judge 严格按标准打分；④ 温度设为 0（`temperature=0`），最大化确定性；⑤ 定期用 10 条标注用例做一致性校验，低于 0.7 时优化提示词 |
+  1154	
+  1155	### 8.2 兼容性风险
+  1156	
+  1157	#### 风险 R-05：Python 版本与依赖冲突
+  1158	
+  1159	| 项 | 内容 |
+  1160	|---|---|
+  1161	| **风险描述** | LangGraph 0.2 + LangChain 0.3 + Pydantic v2 组合较新，部分子依赖可能要求 Pydantic v1，导致冲突 |
+  1162	| **概率** | 中 |
+  1163	| **应对方案** | ① 使用 `pip-compile` 锁定全量依赖版本（requirements.lock）；② CI 矩阵在 Python 3.10 和 3.12 上跑安装测试；③ 遇到 Pydantic v1/v2 冲突的库，寻找替代或使用 `pydantic.v1` 兼容模块 |
+  1164	
+  1165	#### 风险 R-06：Windows 与 Linux 行为差异
+  1166	
+  1167	| 项 | 内容 |
+  1168	|---|---|
+  1169	| **风险描述** | 开发在 Windows，部署在 Linux 容器；文件路径分隔符、进程信号处理、sqlite 并发锁行为可能不同 |
+  1170	| **概率** | 中 |
+  1171	| **应对方案** | ① 所有路径使用 `pathlib.Path`，不硬编码分隔符；② SQLite 开启 WAL 模式（`PRAGMA journal_mode=WAL`）提升并发读写；③ 开发阶段用 Docker Desktop 验证 Linux 容器行为，不依赖本机 Python；④ CI 在 Ubuntu runner 上跑全量测试 |
+  1172	
+  1173	#### 风险 R-07：SQLite 并发写入瓶颈
+  1174	
+  1175	| 项 | 内容 |
+  1176	|---|---|
+  1177	| **风险描述** | SQLite 写锁为库级锁，多 Worker 并发写入任务状态时可能出现 `database is locked` 错误 |
+  1178	| **概率** | 中（评测并发时） |
+  1179	| **应对方案** | ① WAL 模式允许读写并发；② 设置 `busy_timeout=5000ms`，写冲突时等待而非立即报错；③ 评测场景下 Worker concurrency 控制在 ≤4；④ 高频写入（如 agent_messages）采用批量插入；⑤ 若仍有瓶颈，可将检查点库与业务库分离为两个文件 |
+  1180	
+  1181	### 8.3 性能风险
+  1182	
+  1183	#### 风险 R-08：单任务响应延迟超标
+  1184	
+  1185	| 项 | 内容 |
+  1186	|---|---|
+  1187	| **风险描述** | 多 Agent 多轮 + 工具调用 + LLM 推理，单任务可能超过 P95 ≤ 90s 目标（M-05/Q-02） |
+  1188	| **概率** | 中 |
+  1189	| **应对方案** | ① Planner 一次性拆解全部子任务，Executor 按依赖关系并行执行无依赖的子任务（asyncio.gather）；② 工具调用超时 30s，避免单个工具拖慢全局；③ LLM 调用设置合理 timeout（60s）+ 流式响应（如支持）；④ 评测时预热 LLM 连接（连接池复用）；⑤ 若 P95 持续超标，优化提示词减少轮次，或降低 max_rounds 到 3 |
+  1190	
+  1191	#### 风险 R-09：评测全量执行超时
+  1192	
+  1193	| 项 | 内容 |
+  1194	|---|---|
+  1195	| **风险描述** | 30 用例 × 每用例多轮 Agent + Judge 评分，可能超过 5 分钟（E-04） |
+  1196	| **概率** | 中 |
+  1197	| **应对方案** | ① 评测用例并发执行（`EVAL_MAX_CONCURRENT=4`），而非串行；② Judge 评分与 Agent 执行 pipeline 化（Agent 完成一个立即评分，不等全部完成）；③ Mock 模式下评测应 < 1 分钟；④ 真实 API 模式下若超时，提供 `--batch` 参数分批执行 |
+  1198	
+  1199	### 8.4 工程风险
+  1200	
+  1201	#### 风险 R-10：6 周开发周期紧张
+  1202	
+  1203	| 项 | 内容 |
+  1204	|---|---|
+  1205	| **风险描述** | 1 人独立开发，6 周内需完成 5 个核心模块 + 4 个配套模块，风险较高 |
+  1206	| **概率** | 高 |
+  1207	| **应对方案** | ① 严格按基线里程碑推进，每周验收可运行增量；② 核心范围（C-01~C-05）优先，配套范围（P-01~P-04）可裁剪；③ 前端用 Gradio 快速原型替代纯 HTML（若时间不足），满足 P-01 最低要求；④ 复用 LangChain 生态现成组件，不重复造轮子；⑤ 每周预留 1 天缓冲处理技术债和 bug |
+  1208	
+  1209	#### 风险 R-11：单元测试覆盖率不达标
+  1210	
+  1211	| 项 | 内容 |
+  1212	|---|---|
+  1213	| **风险描述** | Agent 编排逻辑依赖 LLM 输出，难以单元测试，覆盖率可能低于 60%（S-01/Q-01） |
+  1214	| **概率** | 中 |
+  1215	| **应对方案** | ① LLM 调用层抽象为接口，单元测试用 Mock 替换；② 工具适配器、参数校验、状态流转、评分聚合等纯逻辑模块重点覆盖；③ 集成测试用 Mock LLM 验证端到端流程；④ 覆盖率统计排除 LLM 提示词模板和配置文件 |
+  1216	
+  1217	### 8.5 风险矩阵汇总
+  1218	
+  1219	| 编号 | 风险 | 概率 | 严重度 | 风险等级 | 状态 |
+  1220	|---|---|---|---|---|---|
+  1221	| R-01 | LangGraph 状态复杂度 | 高 | 高 | **严重** | 有应对方案 |
+  1222	| R-02 | MCP 协议稳定性 | 中 | 高 | **高** | 有应对方案 |
+  1223	| R-03 | LLM API 不稳定/预算 | 中 | 高 | **高** | 有应对方案 |
+  1224	| R-04 | Judge 评分一致性 | 中 | 中 | 中 | 有应对方案 |
+  1225	| R-05 | 依赖冲突 | 中 | 中 | 中 | 有应对方案 |
+  1226	| R-06 | 跨 OS 差异 | 中 | 中 | 中 | 有应对方案 |
+  1227	| R-07 | SQLite 并发 | 中 | 中 | 中 | 有应对方案 |
+  1228	| R-08 | 任务延迟超标 | 中 | 中 | 中 | 有应对方案 |
+  1229	| R-09 | 评测超时 | 中 | 中 | 中 | 有应对方案 |
+  1230	| R-10 | 周期紧张 | 高 | 高 | **严重** | 有应对方案 |
+  1231	| R-11 | 测试覆盖率 | 中 | 低 | 低 | 有应对方案 |
+  1232	
+  1233	---
+  1234	
+  1235	## 附录 A：项目代码目录结构规划
+  1236	
+  1237	```
+  1238	multi-agent-orchestration-eval-platform/
+  1239	├── app/                          # 主应用包
+  1240	│   ├── __init__.py
+  1241	│   ├── main.py                   # FastAPI 入口
+  1242	│   ├── config.py                 # Pydantic Settings 配置
+  1243	│   ├── worker.py                 # Celery 实例与任务定义
+  1244	│   ├── api/                      # 接入层：API 路由
+  1245	│   │   ├── __init__.py
+  1246	│   │   ├── deps.py               # 依赖注入
+  1247	│   │   ├── tasks.py              # 任务接口
+  1248	│   │   ├── eval.py               # 评测接口
+  1249	│   │   ├── tools.py              # 工具接口
+  1250	│   │   └── system.py             # 健康检查/指标
+  1251	│   ├── services/                 # 应用层：业务服务
+  1252	│   │   ├── __init__.py
+  1253	│   │   ├── task_service.py
+  1254	│   │   ├── orchestration_service.py
+  1255	│   │   ├── eval_service.py
+  1256	│   │   └── report_service.py
+  1257	│   ├── agents/                   # 服务层：Agent 编排
+  1258	│   │   ├── __init__.py
+  1259	│   │   ├── graph.py              # LangGraph StateGraph 定义
+  1260	│   │   ├── state.py              # 状态模型
+  1261	│   │   ├── planner.py            # Planner Agent
+  1262	│   │   ├── executor.py           # Executor Agent
+  1263	│   │   ├── reviewer.py           # Reviewer Agent
+  1264	│   │   └── aggregator.py         # Aggregator Agent
+  1265	│   ├── mcp/                      # 服务层：MCP 工具
+  1266	│   │   ├── __init__.py
+  1267	│   │   ├── server.py             # MCP Server 入口
+  1268	│   │   ├── client.py             # MCP Client 封装
+  1269	│   │   ├── registry.py           # 工具注册中心
+  1270	│   │   └── tools/                # 工具适配器
+  1271	│   │       ├── __init__.py
+  1272	│   │       ├── web_search.py
+  1273	│   │       ├── code_exec.py
+  1274	│   │       ├── file_rw.py
+  1275	│   │       └── db_query.py
+  1276	│   ├── llm/                      # 服务层：LLM 网关
+  1277	│   │   ├── __init__.py
+  1278	│   │   ├── gateway.py            # 统一网关
+  1279	│   │   ├── providers/            # 模型提供商
+  1280	│   │   │   ├── __init__.py
+  1281	│   │   │   ├── deepseek.py
+  1282	│   │   │   ├── qwen.py
+  1283	│   │   │   └── ollama.py
+  1284	│   │   └── mock.py               # Mock 模式
+  1285	│   ├── eval/                     # 服务层：评测引擎
+  1286	│   │   ├── __init__.py
+  1287	│   │   ├── engine.py             # 评测引擎
+  1288	│   │   ├── judge.py              # LLM-as-Judge
+  1289	│   │   ├── loader.py             # 用例加载
+  1290	│   │   └── scorer.py             # 评分计算
+  1291	│   ├── models/                   # 存储层：数据模型
+  1292	│   │   ├── __init__.py
+  1293	│   │   ├── base.py               # SQLAlchemy Base
+  1294	│   │   ├── task.py
+  1295	│   │   ├── eval.py
+  1296	│   │   └── tool.py
+  1297	│   ├── repositories/             # 存储层：数据访问
+  1298	│   │   ├── __init__.py
+  1299	│   │   ├── task_repo.py
+  1300	│   │   └── eval_repo.py
+  1301	│   ├── schemas/                  # Pydantic 请求/响应模型
+  1302	│   │   ├── __init__.py
+  1303	│   │   ├── task.py
+  1304	│   │   ├── eval.py
+  1305	│   │   └── common.py
+  1306	│   ├── core/                     # 运维层：基础设施
+  1307	│   │   ├── __init__.py
+  1308	│   │   ├── logging.py            # structlog 配置
+  1309	│   │   ├── metrics.py            # Prometheus 指标
+  1310	│   │   ├── exceptions.py         # 统一异常
+  1311	│   │   └── middleware.py         # 鉴权/限流/trace_id
+  1312	│   └── cli/                      # CLI 工具
+  1313	│       ├── __init__.py
+  1314	│       └── main.py
+  1315	├── frontend/                     # 前端静态文件
+  1316	│   ├── index.html
+  1317	│   ├── app.js
+  1318	│   └── styles.css
+  1319	├── data/                         # 数据目录（gitignore）
+  1320	│   ├── db/
+  1321	│   ├── checkpoints/
+  1322	│   ├── reports/
+  1323	│   └── logs/
+  1324	├── eval_cases/                   # 评测用例库
+  1325	│   ├── research.yaml
+  1326	│   ├── code_review.yaml
+  1327	│   └── general.yaml
+  1328	├── tests/                        # 测试
+  1329	│   ├── unit/
+  1330	│   ├── integration/
+  1331	│   └── conftest.py
+  1332	├── config/                       # 环境配置
+  1333	│   ├── dev.yaml
+  1334	│   ├── test.yaml
+  1335	│   └── prod.yaml
+  1336	├── migrations/                   # Alembic 迁移
+  1337	├── Dockerfile
+  1338	├── docker-compose.yml
+  1339	├── requirements.txt
+  1340	├── requirements.lock
+  1341	├── pyproject.toml                # Ruff/mypy/pytest 配置
+  1342	├── .env.example
+  1343	├── .gitignore
+  1344	└── README.md
+  1345	```
+  1346	
+  1347	## 附录 B：基线指标对照
+  1348	
+  1349	| 基线指标 | 架构设计对应 | 满足情况 |
+  1350	|---|---|---|
+  1351	| M-01 ≥3 Agent 角色 | Planner/Executor/Reviewer/Aggregator 四角色 | 满足 |
+  1352	| M-02 ≥5 轮协作 | max_rounds=5 配置，状态图支持循环 | 满足 |
+  1353	| M-03 完成率 ≥80% | Reviewer 质量门 + 重试机制 | 设计保障，需运行验证 |
+  1354	| M-04 100% 可追溯 | SqliteSaver 检查点 + agent_messages/tool_calls 表 | 满足 |
+  1355	| M-05 P50≤30s P95≤90s | 并行执行 + 超时控制 + 连接池 | 设计保障，需运行验证 |
+  1356	| T-01 ≥4 MCP 工具 | web_search/code_exec/file_rw/db_query | 满足 |
+  1357	| T-02 成功率 ≥90% | 参数校验 + 超时 + 异常处理 | 设计保障 |
+  1358	| T-03 新增工具 ≤50 行 | ToolAdapter Protocol + 注册中心 | 满足 |
+  1359	| T-04 100% 参数校验 | JSON Schema 校验前置 | 满足 |
+  1360	| E-01 ≥4 评测维度 | accuracy/relevance/completeness/format | 满足 |
+  1361	| E-02 ≥30 用例 | eval_cases 表 + YAML 用例库 | 满足 |
+  1362	| E-03 100% 自动化 | CLI 一键评测 + API 触发 | 满足 |
+  1363	| E-04 ≤5 分钟 | 并发执行 + pipeline 化 | 设计保障 |
+  1364	| E-05 Spearman ≥0.7 | temperature=0 + 双次评分 | 设计保障 |
+  1365	| S-01 覆盖率 ≥60% | Mock LLM + 纯逻辑重点覆盖 | 设计保障 |
+  1366	| S-02 ≥5 API 端点 | 18 个端点 | 满足 |
+  1367	| S-03 文档 ≥2000 字 | 本文档 + README + API 文档 | 满足 |
+  1368	| S-04 一键启动 | docker-compose up -d | 满足 |
+  1369	
+  1370	---
+  1371	
+  1372	**文档结束**
+  1373	
+  1374	*本文档为第一轮技术架构设计，作为开发指导基准。后续架构变更需更新版本号并记录变更日志。*

@@ -1,0 +1,678 @@
+Read "D:\lg\project\multi-agent-orchestration-eval-platform\日志草稿.txt":
+
+     1	
+     2	============================================================
+     3	   多智能体编排与模型评测平台 - 启动服务
+     4	============================================================
+     5	
+     6	[1/3] 检查虚拟环境...
+     7	      虚拟环境正常
+     8	
+     9	[2/3] 检查依赖...
+    10	      依赖正常
+    11	
+    12	[3/3] 启动服务...
+    13	
+    14	============================================================
+    15	   服务启动中，请稍候...
+    16	   浏览器访问地址：http://localhost:8000
+    17	   【重要】请勿关闭此窗口，关闭即停止服务
+    18	============================================================
+    19	
+    20	{"path": "D:\\lg\\project\\multi-agent-orchestration-eval-platform\\static", "event": "static_files_mounted", "level": "info", "timestamp": "2026-10-06T00:22:44.411294Z", "trace_id": "unknown"}
+    21	{"broker": "redis://localhost:6379/0", "event": "celery_initialized", "level": "info", "timestamp": "2026-10-06T00:22:44.794702Z", "trace_id": "unknown"}
+    22	D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\pydantic\_internal\_fields.py:132: UserWarning: Field "model_settings" in EvalRunCreateRequest has conflict with protected namespace "model_".
+    23	
+    24	You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+    25	  warnings.warn(
+    26	D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\pydantic\_internal\_fields.py:132: UserWarning: Field "model_config_json" in EvalRunResponse has conflict with protected namespace "model_".
+    27	
+    28	You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+    29	  warnings.warn(
+    30	INFO:     Started server process [56256]
+    31	INFO:     Waiting for application startup.
+    32	{"version": "0.1.0", "provider": "mock", "event": "application_starting", "level": "info", "timestamp": "2026-10-06T00:22:44.887397Z", "trace_id": "unknown"}
+    33	{"url": "sqlite+aiosqlite:///data/db/app.db", "event": "database_engine_created", "level": "info", "timestamp": "2026-10-06T00:22:44.901213Z", "trace_id": "unknown"}
+    34	{"url": "sqlite+aiosqlite:///data/db/app.db", "tables": 9, "event": "database_initialized", "level": "info", "timestamp": "2026-10-06T00:22:44.935635Z", "trace_id": "unknown"}
+    35	{"event": "database_initialized_success", "level": "info", "timestamp": "2026-10-06T00:22:44.936636Z", "trace_id": "unknown"}
+    36	{"version": "0.1.0", "event": "application_started", "level": "info", "timestamp": "2026-10-06T00:22:44.936636Z", "trace_id": "unknown"}
+    37	INFO:     Application startup complete.
+    38	INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+    39	{"method": "GET", "path": "/", "status_code": 307, "duration_ms": 0.6, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:22:46.921426Z", "trace_id": "ac4e80bb-fe7f-4b2e-98db-d6c8f3873fb7"}
+    40	INFO:     127.0.0.1:61109 - "GET / HTTP/1.1" 307 Temporary Redirect
+    41	{"method": "GET", "path": "/api/v1/eval/runs", "status_code": 500, "duration_ms": 0.61, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:22:47.088984Z", "trace_id": "e43b6636-e579-4b4d-8dfb-a55c83a3e489"}
+    42	{"error": "'EvalRepository' object has no attribute 'list_runs'", "error_type": "AttributeError", "path": "/api/v1/eval/runs", "trace_id": "e43b6636-e579-4b4d-8dfb-a55c83a3e489", "exc_info": true, "event": "unhandled_exception", "level": "error", "timestamp": "2026-10-06T00:22:47.089985Z"}
+    43	INFO:     127.0.0.1:62142 - "GET /api/v1/eval/runs?page=1&page_size=20 HTTP/1.1" 500 Internal Server Error
+    44	ERROR:    Exception in ASGI application
+    45	  + Exception Group Traceback (most recent call last):
+    46	  |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 77, in collapse_excgroups
+    47	  |     yield
+    48	  |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 186, in __call__
+    49	  |     async with anyio.create_task_group() as task_group:
+    50	  |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 847, in __aexit__
+    51	  |     raise BaseExceptionGroup(
+    52	  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+    53	  +-+---------------- 1 ----------------
+    54	    | Traceback (most recent call last):
+    55	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 401, in run_asgi
+    56	    |     result = await app(  # type: ignore[func-returns-value]
+    57	    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    58	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 70, in __call__
+    59	    |     return await self.app(scope, receive, send)
+    60	    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    61	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    62	    |     await super().__call__(scope, receive, send)
+    63	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    64	    |     await self.middleware_stack(scope, receive, send)
+    65	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    66	    |     raise exc
+    67	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    68	    |     await self.app(scope, receive, _send)
+    69	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+    70	    |     with collapse_excgroups():
+    71	    |   File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+    72	    |     self.gen.throw(typ, value, traceback)
+    73	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+    74	    |     raise exc
+    75	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    76	    |     response = await self.dispatch_func(request, call_next)
+    77	    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    78	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 104, in dispatch
+    79	    |     return await call_next(request)
+    80	    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+    81	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    82	    |     raise app_exc
+    83	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    84	    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    85	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+    86	    |     with collapse_excgroups():
+    87	    |   File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+    88	    |     self.gen.throw(typ, value, traceback)
+    89	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+    90	    |     raise exc
+    91	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    92	    |     response = await self.dispatch_func(request, call_next)
+    93	    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    94	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 61, in dispatch
+    95	    |     response = await call_next(request)
+    96	    |                ^^^^^^^^^^^^^^^^^^^^^^^^
+    97	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    98	    |     raise app_exc
+    99	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+   100	    |     await self.app(scope, receive_or_disconnect, send_no_error)
+   101	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+   102	    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+   103	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   104	    |     raise exc
+   105	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   106	    |     await app(scope, receive, sender)
+   107	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+   108	    |     await self.middleware_stack(scope, receive, send)
+   109	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+   110	    |     await route.handle(scope, receive, send)
+   111	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+   112	    |     await self.app(scope, receive, send)
+   113	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+   114	    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+   115	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   116	    |     raise exc
+   117	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   118	    |     await app(scope, receive, sender)
+   119	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+   120	    |     response = await f(request)
+   121	    |                ^^^^^^^^^^^^^^^^
+   122	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+   123	    |     raw_response = await run_endpoint_function(
+   124	    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   125	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+   126	    |     return await dependant.call(**values)
+   127	    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   128	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\api\v1\eval.py", line 76, in list_eval_runs
+   129	    |     runs, total = await _eval_service.list_runs(status=status, page=page, page_size=page_size)
+   130	    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   131	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\eval\eval_service.py", line 159, in list_runs
+   132	    |     return await repo.list_runs(status=status, page=page, page_size=page_size)
+   133	    |                  ^^^^^^^^^^^^^^
+   134	    | AttributeError: 'EvalRepository' object has no attribute 'list_runs'
+   135	    +------------------------------------
+   136	
+   137	During handling of the above exception, another exception occurred:
+   138	
+   139	Traceback (most recent call last):
+   140	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 401, in run_asgi
+   141	    result = await app(  # type: ignore[func-returns-value]
+   142	             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   143	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 70, in __call__
+   144	    return await self.app(scope, receive, send)
+   145	           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   146	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+   147	    await super().__call__(scope, receive, send)
+   148	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+   149	    await self.middleware_stack(scope, receive, send)
+   150	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+   151	    raise exc
+   152	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+   153	    await self.app(scope, receive, _send)
+   154	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+   155	    with collapse_excgroups():
+   156	  File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+   157	    self.gen.throw(typ, value, traceback)
+   158	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+   159	    raise exc
+   160	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+   161	    response = await self.dispatch_func(request, call_next)
+   162	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   163	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 104, in dispatch
+   164	    return await call_next(request)
+   165	           ^^^^^^^^^^^^^^^^^^^^^^^^
+   166	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+   167	    raise app_exc
+   168	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+   169	    await self.app(scope, receive_or_disconnect, send_no_error)
+   170	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+   171	    with collapse_excgroups():
+   172	  File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+   173	    self.gen.throw(typ, value, traceback)
+   174	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+   175	    raise exc
+   176	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+   177	    response = await self.dispatch_func(request, call_next)
+   178	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   179	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 61, in dispatch
+   180	    response = await call_next(request)
+   181	               ^^^^^^^^^^^^^^^^^^^^^^^^
+   182	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+   183	    raise app_exc
+   184	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+   185	    await self.app(scope, receive_or_disconnect, send_no_error)
+   186	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+   187	    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+   188	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   189	    raise exc
+   190	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   191	    await app(scope, receive, sender)
+   192	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+   193	    await self.middleware_stack(scope, receive, send)
+   194	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+   195	    await route.handle(scope, receive, send)
+   196	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+   197	    await self.app(scope, receive, send)
+   198	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+   199	    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+   200	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   201	    raise exc
+   202	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   203	    await app(scope, receive, sender)
+   204	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+   205	    response = await f(request)
+   206	               ^^^^^^^^^^^^^^^^
+   207	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+   208	    raw_response = await run_endpoint_function(
+   209	                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   210	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+   211	    return await dependant.call(**values)
+   212	           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   213	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\api\v1\eval.py", line 76, in list_eval_runs
+   214	    runs, total = await _eval_service.list_runs(status=status, page=page, page_size=page_size)
+   215	                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   216	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\eval\eval_service.py", line 159, in list_runs
+   217	    return await repo.list_runs(status=status, page=page, page_size=page_size)
+   218	                 ^^^^^^^^^^^^^^
+   219	AttributeError: 'EvalRepository' object has no attribute 'list_runs'
+   220	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2180.44, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:22:49.264799Z", "trace_id": "e43b6636-e579-4b4d-8dfb-a55c83a3e489"}
+   221	INFO:     127.0.0.1:61109 - "GET /api/v1/health HTTP/1.1" 200 OK
+   222	{"method": "GET", "path": "/api/v1/tasks", "status_code": 200, "duration_ms": 2210.81, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:22:49.296889Z", "trace_id": "ebcfa935-a0d2-4cac-95f0-e18dc9896233"}
+   223	INFO:     127.0.0.1:54744 - "GET /api/v1/tasks?page=1&page_size=20 HTTP/1.1" 200 OK
+   224	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2049.91, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:22:51.318601Z", "trace_id": "ebcfa935-a0d2-4cac-95f0-e18dc9896233"}
+   225	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2017.02, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:23:19.168264Z", "trace_id": "00b46a19-5207-40c8-b324-5450bf66a288"}
+   226	INFO:     127.0.0.1:52883 - "GET /api/v1/health HTTP/1.1" 200 OK
+   227	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2032.89, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:23:49.191437Z", "trace_id": "486339de-be11-476f-970b-5ef9cd8d01ea"}
+   228	INFO:     127.0.0.1:64927 - "GET /api/v1/health HTTP/1.1" 200 OK
+   229	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2027.49, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:24:19.188997Z", "trace_id": "64a00bba-8e41-4bbd-af78-1835822de8ca"}
+   230	INFO:     127.0.0.1:53269 - "GET /api/v1/health HTTP/1.1" 200 OK
+   231	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2037.53, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:24:49.197233Z", "trace_id": "59763e58-bcc8-4e01-b916-bd0a48c4bd7e"}
+   232	INFO:     127.0.0.1:53641 - "GET /api/v1/health HTTP/1.1" 200 OK
+   233	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2031.52, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:25:19.189360Z", "trace_id": "22f0b9c9-62d1-4bdb-aee6-37f364f97ae5"}
+   234	INFO:     127.0.0.1:56485 - "GET /api/v1/health HTTP/1.1" 200 OK
+   235	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2011.51, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:25:49.161087Z", "trace_id": "1e959ac7-22ca-448f-b519-549adc566957"}
+   236	INFO:     127.0.0.1:53544 - "GET /api/v1/health HTTP/1.1" 200 OK
+   237	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2039.92, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:19.127672Z", "trace_id": "f5499de1-3ae2-40d4-96a3-92d41a4b8a4e"}
+   238	INFO:     127.0.0.1:57309 - "GET /api/v1/health HTTP/1.1" 200 OK
+   239	{"task_id": "19052970-de84-4c96-bce2-f05b4cfab46c", "scenario": "orchestration", "event": "task_created", "level": "info", "timestamp": "2026-10-06T00:26:34.723745Z", "trace_id": "d16ada55-eb13-4d51-be33-1e8ad113c224"}
+   240	{"task_id": "19052970-de84-4c96-bce2-f05b4cfab46c", "event": "task_submitted_celery", "level": "info", "timestamp": "2026-10-06T00:26:41.036465Z", "trace_id": "d16ada55-eb13-4d51-be33-1e8ad113c224"}
+   241	{"method": "POST", "path": "/api/v1/tasks", "status_code": 200, "duration_ms": 6369.0, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:41.036465Z", "trace_id": "d16ada55-eb13-4d51-be33-1e8ad113c224"}
+   242	INFO:     127.0.0.1:57702 - "POST /api/v1/tasks HTTP/1.1" 200 OK
+   243	{"method": "GET", "path": "/api/v1/tasks", "status_code": 200, "duration_ms": 12.97, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:41.059346Z", "trace_id": "7622441c-07bc-44a9-913a-6c0a860f80f6"}
+   244	INFO:     127.0.0.1:57702 - "GET /api/v1/tasks?page=1&page_size=20 HTTP/1.1" 200 OK
+   245	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 8.35, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:43.061152Z", "trace_id": "3b0e9f8f-c402-4e63-892c-7d85a6830f34"}
+   246	INFO:     127.0.0.1:57702 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   247	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 6.61, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:45.059014Z", "trace_id": "2a74edfa-dbd4-40dc-9796-5dbd422ad52c"}
+   248	INFO:     127.0.0.1:57702 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   249	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 15.69, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:47.170015Z", "trace_id": "466d8ab1-3f4a-4b36-b499-8bd66767b5f9"}
+   250	INFO:     127.0.0.1:57702 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   251	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2035.94, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:49.193332Z", "trace_id": "466d8ab1-3f4a-4b36-b499-8bd66767b5f9"}
+   252	INFO:     127.0.0.1:54482 - "GET /api/v1/health HTTP/1.1" 200 OK
+   253	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 10.86, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:49.205261Z", "trace_id": "20756048-9e35-48d8-8d6e-2a2378488fca"}
+   254	INFO:     127.0.0.1:57702 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   255	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 11.57, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:51.177824Z", "trace_id": "b8bc84ed-3460-4bbb-bf1d-87a23b52e95e"}
+   256	INFO:     127.0.0.1:57702 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   257	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 10.09, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:53.169381Z", "trace_id": "0c4fa9fb-4e00-431a-bb89-b386385aaaa2"}
+   258	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   259	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 6.17, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:55.166126Z", "trace_id": "5657b8b2-11a9-4962-95dd-0699dd5a9f96"}
+   260	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   261	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 12.68, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:57.161609Z", "trace_id": "656dd1d8-1e05-48cc-8e8d-0f6af2ebc756"}
+   262	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   263	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 5.7, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:26:59.151506Z", "trace_id": "e52b445a-b786-4a93-a4b1-b20463af61da"}
+   264	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   265	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 9.49, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:01.172685Z", "trace_id": "b1519add-7660-4d82-921b-139a9df03abe"}
+   266	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   267	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 10.24, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:03.169178Z", "trace_id": "ed03c25e-b465-4928-bd43-0ea832994892"}
+   268	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   269	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 11.13, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:05.167246Z", "trace_id": "a4eaaf11-8169-4f7e-9f19-240c7d8e1749"}
+   270	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   271	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 7.39, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:07.155502Z", "trace_id": "05f4529e-b287-4170-8097-e2dc757313dd"}
+   272	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   273	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 7.79, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:09.154888Z", "trace_id": "fe698227-2a3b-4506-a912-0cf0637f0c77"}
+   274	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   275	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 10.19, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:11.057124Z", "trace_id": "86615a50-4910-43c1-abb3-ebe203ef4db6"}
+   276	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   277	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 6.51, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:13.053761Z", "trace_id": "509da02e-4905-4e0d-bd01-16ec9475fff5"}
+   278	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   279	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 9.25, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:15.055291Z", "trace_id": "8cb6a088-fade-4332-92a0-f4527dc974c9"}
+   280	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   281	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2024.08, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:19.177601Z", "trace_id": "9f86cb1b-a541-404c-a8f6-ab63954a23d6"}
+   282	INFO:     127.0.0.1:52427 - "GET /api/v1/health HTTP/1.1" 200 OK
+   283	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 2033.61, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:19.183796Z", "trace_id": "9f86cb1b-a541-404c-a8f6-ab63954a23d6"}
+   284	INFO:     127.0.0.1:57544 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   285	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 9.68, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:19.195451Z", "trace_id": "7f14426d-16c8-438e-b74a-0ab0044ced97"}
+   286	INFO:     127.0.0.1:52427 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   287	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 15.02, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:21.061948Z", "trace_id": "d6c75bf8-9e87-461e-9113-386002149b21"}
+   288	INFO:     127.0.0.1:52427 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   289	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 8.39, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:23.054261Z", "trace_id": "277f6d47-c548-4174-a3dd-f57833692f9f"}
+   290	INFO:     127.0.0.1:52427 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   291	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 13.3, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:23.989221Z", "trace_id": "a6a3ba8b-49fe-4255-8a26-1f52a0a25245"}
+   292	INFO:     127.0.0.1:52427 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   293	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 8.45, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:25.054338Z", "trace_id": "7e6a8476-7774-4a04-9ce5-239cd8a75465"}
+   294	INFO:     127.0.0.1:52427 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   295	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 10.47, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:27.057597Z", "trace_id": "413d558f-210d-45ce-a515-9f5479d994a1"}
+   296	INFO:     127.0.0.1:52427 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   297	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c/messages", "status_code": 500, "duration_ms": 12.52, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:27.264127Z", "trace_id": "aaf00371-bc7f-4360-8414-811f1f151970"}
+   298	{"error": "TaskRepository.get_trace_messages() got an unexpected keyword argument 'limit'", "error_type": "TypeError", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c/messages", "trace_id": "aaf00371-bc7f-4360-8414-811f1f151970", "exc_info": true, "event": "unhandled_exception", "level": "error", "timestamp": "2026-10-06T00:27:27.264127Z"}
+   299	INFO:     127.0.0.1:52427 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c/messages?limit=200 HTTP/1.1" 500 Internal Server Error
+   300	ERROR:    Exception in ASGI application
+   301	  + Exception Group Traceback (most recent call last):
+   302	  |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 77, in collapse_excgroups
+   303	  |     yield
+   304	  |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 186, in __call__
+   305	  |     async with anyio.create_task_group() as task_group:
+   306	  |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 847, in __aexit__
+   307	  |     raise BaseExceptionGroup(
+   308	  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+   309	  +-+---------------- 1 ----------------
+   310	    | Traceback (most recent call last):
+   311	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 401, in run_asgi
+   312	    |     result = await app(  # type: ignore[func-returns-value]
+   313	    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   314	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 70, in __call__
+   315	    |     return await self.app(scope, receive, send)
+   316	    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   317	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+   318	    |     await super().__call__(scope, receive, send)
+   319	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+   320	    |     await self.middleware_stack(scope, receive, send)
+   321	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+   322	    |     raise exc
+   323	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+   324	    |     await self.app(scope, receive, _send)
+   325	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+   326	    |     with collapse_excgroups():
+   327	    |   File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+   328	    |     self.gen.throw(typ, value, traceback)
+   329	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+   330	    |     raise exc
+   331	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+   332	    |     response = await self.dispatch_func(request, call_next)
+   333	    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   334	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 104, in dispatch
+   335	    |     return await call_next(request)
+   336	    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+   337	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+   338	    |     raise app_exc
+   339	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+   340	    |     await self.app(scope, receive_or_disconnect, send_no_error)
+   341	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+   342	    |     with collapse_excgroups():
+   343	    |   File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+   344	    |     self.gen.throw(typ, value, traceback)
+   345	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+   346	    |     raise exc
+   347	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+   348	    |     response = await self.dispatch_func(request, call_next)
+   349	    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   350	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 61, in dispatch
+   351	    |     response = await call_next(request)
+   352	    |                ^^^^^^^^^^^^^^^^^^^^^^^^
+   353	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+   354	    |     raise app_exc
+   355	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+   356	    |     await self.app(scope, receive_or_disconnect, send_no_error)
+   357	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+   358	    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+   359	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   360	    |     raise exc
+   361	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   362	    |     await app(scope, receive, sender)
+   363	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+   364	    |     await self.middleware_stack(scope, receive, send)
+   365	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+   366	    |     await route.handle(scope, receive, send)
+   367	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+   368	    |     await self.app(scope, receive, send)
+   369	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+   370	    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+   371	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   372	    |     raise exc
+   373	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   374	    |     await app(scope, receive, sender)
+   375	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+   376	    |     response = await f(request)
+   377	    |                ^^^^^^^^^^^^^^^^
+   378	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+   379	    |     raw_response = await run_endpoint_function(
+   380	    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   381	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+   382	    |     return await dependant.call(**values)
+   383	    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   384	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\api\v1\tasks.py", line 132, in get_task_messages
+   385	    |     messages = await _task_service.get_task_messages(task_id, limit=limit)
+   386	    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   387	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\services\task_service.py", line 231, in get_task_messages
+   388	    |     return await repo.get_trace_messages(task_id, limit=limit)
+   389	    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   390	    | TypeError: TaskRepository.get_trace_messages() got an unexpected keyword argument 'limit'
+   391	    +------------------------------------
+   392	
+   393	During handling of the above exception, another exception occurred:
+   394	
+   395	Traceback (most recent call last):
+   396	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 401, in run_asgi
+   397	    result = await app(  # type: ignore[func-returns-value]
+   398	             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   399	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 70, in __call__
+   400	    return await self.app(scope, receive, send)
+   401	           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   402	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+   403	    await super().__call__(scope, receive, send)
+   404	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+   405	    await self.middleware_stack(scope, receive, send)
+   406	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+   407	    raise exc
+   408	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+   409	    await self.app(scope, receive, _send)
+   410	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+   411	    with collapse_excgroups():
+   412	  File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+   413	    self.gen.throw(typ, value, traceback)
+   414	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+   415	    raise exc
+   416	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+   417	    response = await self.dispatch_func(request, call_next)
+   418	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   419	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 104, in dispatch
+   420	    return await call_next(request)
+   421	           ^^^^^^^^^^^^^^^^^^^^^^^^
+   422	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+   423	    raise app_exc
+   424	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+   425	    await self.app(scope, receive_or_disconnect, send_no_error)
+   426	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+   427	    with collapse_excgroups():
+   428	  File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+   429	    self.gen.throw(typ, value, traceback)
+   430	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+   431	    raise exc
+   432	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+   433	    response = await self.dispatch_func(request, call_next)
+   434	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   435	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 61, in dispatch
+   436	    response = await call_next(request)
+   437	               ^^^^^^^^^^^^^^^^^^^^^^^^
+   438	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+   439	    raise app_exc
+   440	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+   441	    await self.app(scope, receive_or_disconnect, send_no_error)
+   442	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+   443	    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+   444	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   445	    raise exc
+   446	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   447	    await app(scope, receive, sender)
+   448	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+   449	    await self.middleware_stack(scope, receive, send)
+   450	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+   451	    await route.handle(scope, receive, send)
+   452	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+   453	    await self.app(scope, receive, send)
+   454	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+   455	    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+   456	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   457	    raise exc
+   458	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   459	    await app(scope, receive, sender)
+   460	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+   461	    response = await f(request)
+   462	               ^^^^^^^^^^^^^^^^
+   463	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+   464	    raw_response = await run_endpoint_function(
+   465	                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   466	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+   467	    return await dependant.call(**values)
+   468	           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   469	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\api\v1\tasks.py", line 132, in get_task_messages
+   470	    messages = await _task_service.get_task_messages(task_id, limit=limit)
+   471	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   472	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\services\task_service.py", line 231, in get_task_messages
+   473	    return await repo.get_trace_messages(task_id, limit=limit)
+   474	                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   475	TypeError: TaskRepository.get_trace_messages() got an unexpected keyword argument 'limit'
+   476	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 27.93, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:27.281052Z", "trace_id": "aaf00371-bc7f-4360-8414-811f1f151970"}
+   477	INFO:     127.0.0.1:60451 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   478	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 7.96, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:29.055677Z", "trace_id": "109e01b2-3299-4975-90d7-7a75ded93112"}
+   479	INFO:     127.0.0.1:60451 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   480	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 8.5, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:31.054336Z", "trace_id": "1201e11c-5ace-49d6-b8c9-9ffbdee8a716"}
+   481	INFO:     127.0.0.1:60451 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   482	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 5.68, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:33.052738Z", "trace_id": "6e39306a-e967-4b6d-be34-da92680b0499"}
+   483	INFO:     127.0.0.1:60451 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   484	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 5.81, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:35.052251Z", "trace_id": "c4757511-94e9-4cfa-967e-d5e3ae1d0522"}
+   485	INFO:     127.0.0.1:60451 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   486	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 6.18, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:37.055718Z", "trace_id": "f268fb78-5790-4b27-99f4-344ba8e58d92"}
+   487	INFO:     127.0.0.1:60451 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   488	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 6.39, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:39.063583Z", "trace_id": "a6829a56-10dc-42ed-85ca-1af9f20c8daf"}
+   489	INFO:     127.0.0.1:60451 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   490	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 14.9, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:41.059856Z", "trace_id": "4368e988-5da6-463c-bebd-a4af5deeb29c"}
+   491	INFO:     127.0.0.1:60451 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   492	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2041.02, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:27:49.202551Z", "trace_id": "413cff03-47ba-421c-9ab0-f6f08f7a7f07"}
+   493	INFO:     127.0.0.1:54576 - "GET /api/v1/health HTTP/1.1" 200 OK
+   494	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c/messages", "status_code": 500, "duration_ms": 11.07, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:28:04.912821Z", "trace_id": "5e6449e4-4d96-40c4-9417-c5cd6b6f881a"}
+   495	{"error": "TaskRepository.get_trace_messages() got an unexpected keyword argument 'limit'", "error_type": "TypeError", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c/messages", "trace_id": "5e6449e4-4d96-40c4-9417-c5cd6b6f881a", "exc_info": true, "event": "unhandled_exception", "level": "error", "timestamp": "2026-10-06T00:28:04.913899Z"}
+   496	INFO:     127.0.0.1:51315 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c/messages?limit=200 HTTP/1.1" 500 Internal Server Error
+   497	ERROR:    Exception in ASGI application
+   498	  + Exception Group Traceback (most recent call last):
+   499	  |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 77, in collapse_excgroups
+   500	  |     yield
+   501	  |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 186, in __call__
+   502	  |     async with anyio.create_task_group() as task_group:
+   503	  |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 847, in __aexit__
+   504	  |     raise BaseExceptionGroup(
+   505	  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+   506	  +-+---------------- 1 ----------------
+   507	    | Traceback (most recent call last):
+   508	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 401, in run_asgi
+   509	    |     result = await app(  # type: ignore[func-returns-value]
+   510	    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   511	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 70, in __call__
+   512	    |     return await self.app(scope, receive, send)
+   513	    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   514	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+   515	    |     await super().__call__(scope, receive, send)
+   516	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+   517	    |     await self.middleware_stack(scope, receive, send)
+   518	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+   519	    |     raise exc
+   520	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+   521	    |     await self.app(scope, receive, _send)
+   522	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+   523	    |     with collapse_excgroups():
+   524	    |   File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+   525	    |     self.gen.throw(typ, value, traceback)
+   526	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+   527	    |     raise exc
+   528	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+   529	    |     response = await self.dispatch_func(request, call_next)
+   530	    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   531	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 104, in dispatch
+   532	    |     return await call_next(request)
+   533	    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+   534	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+   535	    |     raise app_exc
+   536	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+   537	    |     await self.app(scope, receive_or_disconnect, send_no_error)
+   538	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+   539	    |     with collapse_excgroups():
+   540	    |   File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+   541	    |     self.gen.throw(typ, value, traceback)
+   542	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+   543	    |     raise exc
+   544	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+   545	    |     response = await self.dispatch_func(request, call_next)
+   546	    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   547	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 61, in dispatch
+   548	    |     response = await call_next(request)
+   549	    |                ^^^^^^^^^^^^^^^^^^^^^^^^
+   550	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+   551	    |     raise app_exc
+   552	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+   553	    |     await self.app(scope, receive_or_disconnect, send_no_error)
+   554	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+   555	    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+   556	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   557	    |     raise exc
+   558	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   559	    |     await app(scope, receive, sender)
+   560	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+   561	    |     await self.middleware_stack(scope, receive, send)
+   562	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+   563	    |     await route.handle(scope, receive, send)
+   564	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+   565	    |     await self.app(scope, receive, send)
+   566	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+   567	    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+   568	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   569	    |     raise exc
+   570	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   571	    |     await app(scope, receive, sender)
+   572	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+   573	    |     response = await f(request)
+   574	    |                ^^^^^^^^^^^^^^^^
+   575	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+   576	    |     raw_response = await run_endpoint_function(
+   577	    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   578	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+   579	    |     return await dependant.call(**values)
+   580	    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   581	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\api\v1\tasks.py", line 132, in get_task_messages
+   582	    |     messages = await _task_service.get_task_messages(task_id, limit=limit)
+   583	    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   584	    |   File "D:\lg\project\multi-agent-orchestration-eval-platform\app\services\task_service.py", line 231, in get_task_messages
+   585	    |     return await repo.get_trace_messages(task_id, limit=limit)
+   586	    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   587	    | TypeError: TaskRepository.get_trace_messages() got an unexpected keyword argument 'limit'
+   588	    +------------------------------------
+   589	
+   590	During handling of the above exception, another exception occurred:
+   591	
+   592	Traceback (most recent call last):
+   593	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 401, in run_asgi
+   594	    result = await app(  # type: ignore[func-returns-value]
+   595	             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   596	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 70, in __call__
+   597	    return await self.app(scope, receive, send)
+   598	           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   599	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+   600	    await super().__call__(scope, receive, send)
+   601	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\applications.py", line 113, in __call__
+   602	    await self.middleware_stack(scope, receive, send)
+   603	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+   604	    raise exc
+   605	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+   606	    await self.app(scope, receive, _send)
+   607	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+   608	    with collapse_excgroups():
+   609	  File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+   610	    self.gen.throw(typ, value, traceback)
+   611	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+   612	    raise exc
+   613	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+   614	    response = await self.dispatch_func(request, call_next)
+   615	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   616	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 104, in dispatch
+   617	    return await call_next(request)
+   618	           ^^^^^^^^^^^^^^^^^^^^^^^^
+   619	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+   620	    raise app_exc
+   621	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+   622	    await self.app(scope, receive_or_disconnect, send_no_error)
+   623	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
+   624	    with collapse_excgroups():
+   625	  File "C:\Users\25399\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 158, in __exit__
+   626	    self.gen.throw(typ, value, traceback)
+   627	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_utils.py", line 83, in collapse_excgroups
+   628	    raise exc
+   629	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+   630	    response = await self.dispatch_func(request, call_next)
+   631	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   632	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\core\middleware.py", line 61, in dispatch
+   633	    response = await call_next(request)
+   634	               ^^^^^^^^^^^^^^^^^^^^^^^^
+   635	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+   636	    raise app_exc
+   637	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+   638	    await self.app(scope, receive_or_disconnect, send_no_error)
+   639	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+   640	    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+   641	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   642	    raise exc
+   643	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   644	    await app(scope, receive, sender)
+   645	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+   646	    await self.middleware_stack(scope, receive, send)
+   647	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+   648	    await route.handle(scope, receive, send)
+   649	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+   650	    await self.app(scope, receive, send)
+   651	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+   652	    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+   653	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 62, in wrapped_app
+   654	    raise exc
+   655	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\_exception_handler.py", line 51, in wrapped_app
+   656	    await app(scope, receive, sender)
+   657	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+   658	    response = await f(request)
+   659	               ^^^^^^^^^^^^^^^^
+   660	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+   661	    raw_response = await run_endpoint_function(
+   662	                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   663	  File "D:\lg\project\multi-agent-orchestration-eval-platform\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+   664	    return await dependant.call(**values)
+   665	           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   666	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\api\v1\tasks.py", line 132, in get_task_messages
+   667	    messages = await _task_service.get_task_messages(task_id, limit=limit)
+   668	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   669	  File "D:\lg\project\multi-agent-orchestration-eval-platform\app\services\task_service.py", line 231, in get_task_messages
+   670	    return await repo.get_trace_messages(task_id, limit=limit)
+   671	                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   672	TypeError: TaskRepository.get_trace_messages() got an unexpected keyword argument 'limit'
+   673	{"method": "GET", "path": "/api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c", "status_code": 200, "duration_ms": 19.52, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:28:04.924332Z", "trace_id": "5e6449e4-4d96-40c4-9417-c5cd6b6f881a"}
+   674	INFO:     127.0.0.1:62765 - "GET /api/v1/tasks/19052970-de84-4c96-bce2-f05b4cfab46c HTTP/1.1" 200 OK
+   675	{"method": "GET", "path": "/api/v1/health", "status_code": 200, "duration_ms": 2025.87, "event": "request_completed", "level": "info", "timestamp": "2026-10-06T00:28:19.117102Z", "trace_id": "bbbbb985-1b57-4e42-b201-7a4bb76661fe"}
+   676	INFO:     127.0.0.1:56663 - "GET /api/v1/health HTTP/1.1" 200 OK

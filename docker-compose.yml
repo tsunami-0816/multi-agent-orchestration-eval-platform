@@ -1,0 +1,104 @@
+# Docker Compose 配置（T13-2）
+# 一键启动：docker-compose up -d
+# 包含：API 服务 + Redis（Celery Broker）+ Worker（Celery Worker）
+
+version: "3.8"
+
+services:
+  # Redis 服务（Celery Broker + 结果后端）
+  redis:
+    image: redis:7-alpine
+    container_name: mae-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # API 服务
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mae-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - APP_LLM_PROVIDER=${APP_LLM_PROVIDER:-mock}
+      - APP_DEEPSEEK_API_KEY=${APP_DEEPSEEK_API_KEY:-}
+      - APP_DATABASE_URL=sqlite+aiosqlite:///data/db/app.db
+      - APP_REDIS_URL=redis://redis:6379/0
+      - APP_CELERY_BROKER_URL=redis://redis:6379/0
+      - APP_CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - APP_CELERY_ENABLED=true
+    volumes:
+      - app_data:/app/data
+      - ./static:/app/static
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+  # Celery Worker（异步任务执行）
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mae-worker
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      - APP_ENV=production
+      - APP_LLM_PROVIDER=${APP_LLM_PROVIDER:-mock}
+      - APP_DEEPSEEK_API_KEY=${APP_DEEPSEEK_API_KEY:-}
+      - APP_DATABASE_URL=sqlite+aiosqlite:///data/db/app.db
+      - APP_REDIS_URL=redis://redis:6379/0
+      - APP_CELERY_BROKER_URL=redis://redis:6379/0
+      - APP_CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - APP_CELERY_ENABLED=true
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+  # Ollama 本地模型（可选，T13-5）
+  # 使用：docker-compose --profile ollama up -d
+  ollama:
+    image: ollama/ollama:latest
+    container_name: mae-ollama
+    restart: unless-stopped
+    profiles: ["ollama"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  redis_data:
+  app_data:
+  ollama_data:
