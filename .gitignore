@@ -33,8 +33,12 @@ ENV/
 *.swo
 *~
 
-# 数据目录（gitignore，包含 SQLite 库、检查点、报告等）
-data/
+# 数据目录：排除运行时产物，但保留评测用例和报告
+data/db/
+data/checkpoints/
+data/logs/
+data/workspace/
+# 保留 data/eval_cases/ 和 data/reports/eval_report.md（核心产物）
 
 # 环境变量
 .env
